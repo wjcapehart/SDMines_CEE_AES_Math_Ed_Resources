@@ -1,12 +1,16 @@
 ---
-title: 'R Multivariate Regression Sandbox (Caution: Typos are Legion)'
+title: 'R Multivariate Regression Sandbox'
 output:
-  pdf_document: default
   html_notebook: default
   html_document: default
+  pdf_document: default
 ---
 
+## R Markdown and Notebooks
+
 This is an [R Studio Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
+
+(Caution: Typos are Legion)
 
 When in our school's Math Statistics courses, R is a typical platform that will be used in the classroom.  
 
@@ -16,7 +20,7 @@ R is open source and can be aquired here.
 
 Since R is open source and is commonly used by a broad community it has gotten a large following.  Also since it's open source there are a HUGE number of discipline-specific packages.  (Many of them don't necessarly do statistics but since R is free...)  
 
-A common workbench end that is used with R is R-Studio which also has an open-source version that you can download from here.
+A common workbench that is used with R is R-Studio which also has an open-source version that you can download from here.
 
 This demonstrates using R to preform a multivariate regression on the Concrete Dataset
 
@@ -32,9 +36,16 @@ You can download it to your machine and make a small edit further down to access
 
 You will need the following packages and their dependencies whcih can be installed with R Studio before you start.
 
-XLConnect (for reading in the spreadsheet data), 
-MASS      (for the linear refgressions) and 
-plyr      (for satisfying your prof's need to go OCD on the original dataset)
+* XLConnect [The XLConnect Package] for reading spreadsheets, 
+* MASS      [Functions and datasets to support Venables and Ripley, "Modern Applied Statistics with S"]. and 
+* plyr      [Tools for Splitting, Applying and Combining Data]
+* e1071     [Misc Functions of the Department of Statistics, Probability Theory Group] for getting skewness and kurtosis
+
+to access most of the linear regression activities here.
+
+And to do some of the fancy plots you;ll see you will want this one:
+
+* beanplot [Visualization via Beanplots (like Boxplot/Stripchart/Violin Plot)]
 
 Warning XLConnect will run off of Java and is therefore often a memory hog and a little pokey for large files but it gives you more control than other Excel R tools 
 
@@ -47,12 +58,20 @@ This segment of the R code allows you to access these packages.
 library(XLConnect) # Load the "Excel Connector for R" Library. (to load the spreadsheet data)
 library(MASS)      # Load the "Modern Applied Statistics with S Library"" (for regressions)
 library(plyr)      # Load the "Tools for Splitting, Applying and Combining Data" Library
+library(e1071)     # Load the "Misc Functions of the Department of Statistics, Probability Theory Group" Library
+library(beanplot)  # Load the "Visualization via Beanplots" Library
 
 ```
 
-You will need to change the path to your file location.  Edit the line below to accomodate where you have placed that downloaded spreadsheet,
+## Fetching, Reading and Prepping our Dataset
+
+Now let's get the file holding our concrete data.
+
+First download the excel work book found here.
 
 [http://kyrill.ias.sdsmt.edu/cee_284/L20_Non_Linear_Regression_Sandbox.xlsx](http://kyrill.ias.sdsmt.edu/cee_284/L20_Non_Linear_Regression_Sandbox.xlsx)
+
+You wil 
 
 ```{r}
 
@@ -73,10 +92,10 @@ Our concrete data is on the sheet called "Concrete."
 
 We are pulling data in from a specific region of the sheet (including a header line) which goes from A2 to K105.
 
-![Screenshot of the Excel Sheet.](http://kyrill.ias.sdsmt.edu/cee_284/Concrete_Spreadsheet_Snapshot.png){ width=50% }
+![Screenshot of the Excel Sheet.](http://kyrill.ias.sdsmt.edu/cee_284/Concrete_Spreadsheet_Snapshot.png){ width=90% }
  
 
-Here we will grab data from the sheet and call the whole group of data (the data "frame") "exceldata"
+Here we will grab data from the sheet and call the whole group of data (the data "frame") "exceldata" with the function [readWorksheetFromFile()](https://www.rdocumentation.org/packages/XLConnect/versions/0.2-14/topics/readWorksheetFromFile)
 
 ```{r}
 
@@ -99,7 +118,7 @@ str(object = exceldata)
 
 In looking at this output, we see that the labels (or headers) are not the same as our spreadsheet. 
 
-Fix that we can fix that... with the rename function (which is in the plyr package)
+Fix that we can fix that... with the [rename()](https://www.rdocumentation.org/packages/plyr/versions/1.8.4/topics/rename) function (which is in the plyr package)
 
 (And we can make a few more tweaks along the way)
 
@@ -141,7 +160,7 @@ OK now let's look at what we just fixed...
  
 ```{r}
                   
-str(object = exceldata)
+exceldata
 
 ```
 
@@ -149,16 +168,200 @@ str(object = exceldata)
 
 Now onward!
 
-Let's start by doing a "simple"" plot.  In this case since I already know the answer because the spreadsheet also has a table of how well our independent variables correlate against the dependent variables (Slump, Flow & Strength).  The Cement correlates the best against Compressive Strength (OK, truth be told, it correlates the least badly).
+## Basic Statistics
 
-We can acutally do this with a correlate function...
+Let's start by doing some mom-and-apple pie basic statistics and related plots.
+
+Let's look at three variables, 
+
+* Cement Amount
+* Water Amount
+* Compressive Strength
+
+(I also like to arrange things in [data frames](https://www.rdocumentation.org/packages/base/versions/3.4.3/topics/data.frame) especially when working with R Markdown Documents)
+
+Remember that these represent our unskilled (or low-skilled) estimates of our parameters.
+
+```{r}
+
+Cement_Stats  = data.frame(n                 = length(  x = exceldata$Cement), # start by loading up the 
+                          mean               = mean(    x = exceldata$Cement), # data_frame with values
+                          standard_deviation = sd(      x = exceldata$Cement),
+                          variance           = var(     x = exceldata$Cement),
+                          skewness           = skewness(x = exceldata$Cement),
+                          kurtosis           = kurtosis(x = exceldata$Cement),
+                          row.names          = "Cement Amount") # row names make a label for the frame
+
+
+Water_Stats  = data.frame(n                  = length(  x = exceldata$Water),
+                          mean               = mean(    x = exceldata$Water), 
+                          standard_deviation = sd(      x = exceldata$Water),
+                          variance           = var(     x = exceldata$Water),
+                          skewness           = skewness(x = exceldata$Water),
+                          kurtosis           = kurtosis(x = exceldata$Water),
+                          row.names          = "Water Amount")
+
+Strength_Stats= data.frame(n                  = length(  x = exceldata$Compressive.Strength),
+                           mean               = mean(    x = exceldata$Compressive.Strength), 
+                           standard_deviation = sd(      x = exceldata$Compressive.Strength),
+                           variance           = var(     x = exceldata$Compressive.Strength),
+                           skewness           = skewness(x = exceldata$Compressive.Strength),
+                           kurtosis           = kurtosis(x = exceldata$Compressive.Strength),
+                           row.names          = "Compressive Strength")
+
+```
+
+Want 95& confidence intervals?  You know the formula... 
+
+$CI=t_{\alpha ,DF}\frac{s_{x}}{\sqrt{n}}$
+
+(Need to add a formula? Formulas in R-Markdown notebooks use the classic "hard-core" pre-MS Word era editor LaTex.  Don't want to learn LaTek?  No worries, neither do I.  [This webpage](https://www.codecogs.com/latex/eqneditor.php) will help you poke-and-click a formula and put it in "LaTekeese"  Just wrap the code between two $-signs)
+
+The t-statistic can be accessed with the function [qt()]("https://www.rdocumentation.org/packages/stats/versions/3.4.3/topics/TDist") (like Mathcad and MATLAB)
+
+```{r}
+
+confidence_level = 0.95
+alpha            = 1.00 - confidence_level
+
+# the old fashioned way... 
+
+Cement_Stats$confidence_limit.95  = qt(p  = 1-alpha/2 ,
+                                       df = Cement_Stats$n-1) * 
+                                    Cement_Stats$standard_deviation / 
+                                    sqrt(Cement_Stats$n)
+
+Water_Stats$confidence_limit.95   = qt(p  = 1-alpha/2 ,
+                                       df = Cement_Stats$n-1) * 
+                                    Water_Stats$standard_deviation / 
+                                    sqrt(Water_Stats$n)
+
+Strength_Stats$confidence_limit.95 = qt(p  = 1-alpha/2 ,
+                                        df = Strength_Stats$n-1) * 
+                                    Strength_Stats$standard_deviation / 
+                                    sqrt(Strength_Stats$n)
+
+print(Cement_Stats)
+
+print(Water_Stats)
+
+print(Strength_Stats)
+
+```
+
+## Visualizing our Data 
+
+We can also do some basic histogram and box whisker plots.
+
+For a histogram, command is "[hist()](https://www.rdocumentation.org/packages/graphics/versions/3.4.3/topics/hist)"
+
+```{r}
+
+# plotting histograms
+
+hist(x      = exceldata$Cement,                        # data to process
+     breaks = 10,                                      # # of intervals
+     main   = "Histogram for Cement Amount",           # main title string
+     xlab   = expression('Cement Amount (kg m'^2*")"), # this lets us use superscripts/subscripts
+     col    = "grey",                                  # color for shading
+     border = "black")                                 # border for shading
+
+hist(x      = exceldata$Water,                        # data to process
+     breaks = 10,                                     # # of intervals
+     main   = "Histogram for Water Amount",           # main title string
+     xlab   = expression('Water Amount (kg m'^2*")"), # x axis label
+     col    = "blue",                                 # color for shading
+     border = "black")                                # border for shading
+
+
+hist(x      = exceldata$Compressive.Strength,         # data to process
+     breaks = 10,                                     # # of intervals
+     main   = "Histogram for Compressional Strength", # main title string
+     xlab   = "Compressional Strength (MPa)",         # x axis label
+     col    = "red",                                  # color for shading
+     border = "black")                                # border for shading
+
+```
+
+
+For a box whisker, command is "[boxplot()](https://www.rdocumentation.org/packages/graphics/versions/3.4.3/topics/boxplot)"
+
+```{r}
+
+# plotting box plots
+ 
+boxplot(x = exceldata$Cement,                           # data to process
+        main = "Box Whisker Plot for Cement",           # main title string
+        ylab = expression('Cement Amount (kg m'^2*")"), # y axis label
+         col = "grey",                                  # color for shading
+      border = "black")                                 # color for borders
+
+
+boxplot(   x = exceldata$Water,                         # data to process
+        main = "Box Whisker Plot for Water",            # main title string
+        ylab = expression('Water Amount (kg m'^2*")"),  # y axis label
+         col = "blue",                                  # color for shading
+      border = "black")                                 # color for borders
+
+
+boxplot(   x = exceldata$Compressive.Strength,              # data to process
+        main = "Box Whisker Plot for Compressive Strength", # main title string
+        ylab = "Compressive Strength (MPa)",                # y axis label
+         col = "red",                                       # color for shading
+      border = "black")                                     # color for borders
+
+
+
+```
+
+With these we of course see a major limitation in box-whisker plots.  We don't, for example, see the bimodal nature of the Concrerte data.  It would be nice to see a variant of the box-wisker that gives is the "looking-down" on the histogram advangtate of the box whsiker with the ability to see "nuance" of various features of the histogram.
+
+Luckilly lots people have and a blessed few have invested the time to write code to mae this happen. There are two major kinds of "alterantive" plots out there.  The "Violin Plot" (not my favorite of the two) is one but I prefer the [beanplot()](https://www.rdocumentation.org/packages/beanplot/versions/1.2/topics/beanplot).
+
+
+```{r}
+
+# plotting box plots
+ 
+beanplot(  x = exceldata$Cement,                           # data to process
+        main = "Box Whisker Plot for Cement",           # main title string
+        ylab = expression('Cement Amount (kg m'^2*")"), # y axis label
+         col = "grey",                                  # color for shading
+      border = "black")                                 # color for borders
+
+
+beanplot(  x = exceldata$Water,                         # data to process
+        main = "Box Whisker Plot for Water",            # main title string
+        ylab = expression('Water Amount (kg m'^2*")"),  # y axis label
+         col = "blue",                                  # color for shading
+      border = "black")                                 # color for borders
+
+
+beanplot(  x = exceldata$Compressive.Strength,              # data to process
+        main = "Box Whisker Plot for Compressive Strength", # main title string
+        ylab = "Compressive Strength (MPa)",                # y axis label
+         col = "red",                                       # color for shading
+      border = "black")                                     # color for borders
+
+
+```
+
+
+So basically the bean plot resembles a hand-drawn distribution but reflected around an axis (and as you saw in our class powerpoints, both halves can represent two different datasets.)
+
+
+## Correlating and then Fitting Cement to Compressive Strength
+
+Let's start by doing a "simple"" plot .  In this case since I already know the answer because the spreadsheet also has a table of how well our independent variables correlate against the dependent variables (e.g., Slump, Flow, or in our case Strength).  The Cement correlates the best against Compressive Strength (OK, truth be told, it correlates the least badly).
+
+We can acutally do this with a correlate function, [cor()](https://www.rdocumentation.org/packages/stats/versions/3.4.3/topics/cor)...
 
 To grab a value in the table "exceldata" we call the data frame (exceldata) and the variable name (Cement or Water vs Compressive.Strength), separating the frame and variable names by a $ sign.
 
 
 ```{r}
 
-print(" Cement vs Compressive Strength Correlation")
+print("Cement vs Compressive Strength Correlation, r")
 
 cor(x = exceldata$Cement,               # the x-value 
     y = exceldata$Compressive.Strength, # the y-value
@@ -171,20 +374,19 @@ or if you like to do everything at once...  (Not always the best thing to do)
 
 ```{r}
 
-print("Correlation of All variables against Compressive Strength")
+print("Correlation (r) of all variables against Compressive Strength")
 
 cor(x = exceldata,                      # this time X is the whole data frame... 
     y = exceldata$Compressive.Strength, # the y-value 
-    use = "everything", # correlate evything
+    use = "everything",                 # correlate evything
     method = "pearson"
     )
 
 ```
 
 
-Now to plot the Cement vs Strength.
 
-First the Concrete vs Strength.. 
+Now to plot the Cement vs Strength as a simople x-y scatter plot.
 
 
 ```{r}
@@ -193,31 +395,41 @@ First the Concrete vs Strength..
 plot(x    = exceldata$Cement,                          # x-values (the $ lets us reach into
      y    = exceldata$Compressive.Strength,            # y-values     the data frame) 
      main = "Example of a Single Variable Regression", # main title string
-     xlab = "Cement (kg m-3 concrete)",                # x-labels
-     ylab = "28-dy Compressive Stren. (MPa)"           # y-labels
+     xlab = expression('Cement Amount (kg m'^2*")"),   # x-labels
+     ylab = "28-dy Compressive Strength (MPa)"         # y-labels
      )
 
 ```
+
+### Creating our linear model and "calibrating" it
 
 
 Not so good a correlation there... 
 
 But let's move on and create a regression model from this.  
 
-Here we will use the lm (linear model) function from the MASS package.
+Here we will use the [lm()](https://www.rdocumentation.org/packages/stats/versions/3.4.3/topics/lm) (linear model) function from the MASS package.
 
 For the regression formula 
 
-Strength(Cement) = a0 + a1 * Cement
+$Strengh = {\alpha_0}+{\alpha_1}\ concrete$
 
-the "prototype" (formula) for the function is... 
+the "prototype" (formula) for the function is written as ... 
 
 "Y ~ X" (with the y-intercept implicit in the formula... you don't put it in but it'll be there when you're done.)
+
+The above syntax is works like this....
+
+Dependant Variable  [~ is a function of ] Independant Variable [and any other parameter you need gets added with a plus]
+
+If this were a $\hat{y}(x)={\alpha_0}+{\alpha_0}\ x^2$, then the prototype for the function would be y~[x^2]
+
+This will hopefully make more sense as we continue!
 
 
 ```{r}
 
-linear_model.S_v_c <- lm(formula = Compressive.Strength ~ Cement, # your formula y ~ x
+linear_model.S_v_c =  lm(formula = Compressive.Strength ~ Cement, # your formula y ~ x
                          data    = exceldata)                     # the data frame
 ```
 
@@ -234,6 +446,8 @@ We'll talk about a few of the other features when we do the larger multivariate 
 summary(object = linear_model.S_v_c)
 
 ```
+
+In the above output, the asterisk identify the most signiicant independant variables.   Here it's trivial even though this is a terrible relationship between cement and strength.  Later we will use all of our available independant variables and the use of these asteriks will become more important.
 
 Now let's make a pair of 95% confidence limits
 
@@ -270,7 +484,7 @@ The resulting array, conf, will have three columns:  the original linear regress
 
 ```{r}
 
-print(conf.S_v_c)
+data.frame(conf.S_v_c)
 
 ```
 
@@ -437,12 +651,11 @@ While here, we can do some general error metrics that may be useful..
 First, the Bias... (if we are too high or too low)
 
 ```{r}
-bias = sqrt(mean(fitted.S_v_all)-mean(exceldata$Compressive.Strength))
+bias = mean(fitted.S_v_all - exceldata$Compressive.Strength)
 
 print("BIAS")
 print(bias)
 ```
-
 
 The root mean squared error (RMSE) thought he standard error of the estmate is technically the one we use here.  RMSE remains a common error metric though... 
 

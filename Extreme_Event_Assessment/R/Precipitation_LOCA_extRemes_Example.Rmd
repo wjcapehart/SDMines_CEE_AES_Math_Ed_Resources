@@ -81,7 +81,10 @@ wetting_rain_treshold = 0.1 * 25.4 # in -> mm (0.1 in = 2.54 )
 ```
 
 
-The LOCA File for Rapid City is included in this larger directory.
+The LOCA File for Rapid City can be downloaded from 
+
+https://github.com/wjcapehart/SDMines_CEE_AES_Math_Ed_Resources/raw/master/Extreme_Event_Assessment/Data_For_Examples/KRAP_LOCA.nc
+
 
 ```{r}
 # you will want to change the directory to point to where you are keeping the file.
