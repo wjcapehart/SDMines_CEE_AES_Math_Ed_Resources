@@ -2,8 +2,8 @@
 title: R extRemes Test with LOCA Downscaled CMIP-5 Model Output and some Horesplay
   with Ensembles (Example Using Precipitation)
 output:
-  pdf_document: default
   html_notebook: default
+  pdf_document: default
   html_document: default
 ---
 
@@ -89,7 +89,7 @@ https://github.com/wjcapehart/SDMines_CEE_AES_Math_Ed_Resources/raw/master/Extre
 ```{r}
 # you will want to change the directory to point to where you are keeping the file.
 
-URL_Root_Directory <- "~/GitHub/LOCA_process/"
+URL_Root_Directory <- "~/GitHub/SDMines_CEE_AES_Math_Ed_Resources/Extreme_Event_Assessment/Data_For_Examples/"
 
 # Here is the variable we want to extract
 #  these should match the files names since the variable in the file and file name match
