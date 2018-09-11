@@ -1,0 +1,1133 @@
+---
+title: Intro to Stats and Regression from a Spreadsheet using R with a little bit
+  of fun using units
+output:
+  html_notebook: default
+  pdf_document: default
+--- 
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing each R "chunk" by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+**Warning. Typos are Legion!**
+
+# 1. Intro
+
+The goal here is to demonstrate cracking open an excel spreadsheet in R and doing some basic stats.
+
+# 2. Loading the Libraries
+
+To work with R we will first have to load some libraries.  This is like in C where you have the #include statement to do things like raise things to powers and stuf like that.
+
+Some of these libaries or "packages" come with R.  Others will have to be installed.  They are indicatred here for this exercise.
+
+Also in this exercise, we're going to use the [tidyverse](https://www.tidyverse.org) set of packages.  Tidyverse is a set of co-developed tools for data science in R.  This is the new big thing in R and is widely used so we are just going to jump in here.  SD Mines has a course beyond Engineering Stats, [MATH 443/543](http://ecatalog.sdsmt.edu/preview_course_nopop.php?catoid=13&coid=16586) that leverages this set of packages.
+
+* Install Us First
+  + [tidyverse](https://www.tidyverse.org) : Set of Data Science pakcages for R
+  + [readxl](https://www.rdocumentation.org/packages/readxl/versions/1.1.0) : part of the [tidyverse](https://www.tidyverse.org) package suite for reading traditional excel spreadsheets.  In the long-run you probably also want to install the tidyverse package suite anyway.
+  + [moments](https://www.rdocumentation.org/packages/moments/versions/0.14) : This has a load of good stuff for data analysis and plotting, more than you will need here, but get it anyway.
+  
+* This should come with R, if not install 'em.
+  + [MASS](https://www.rdocumentation.org/packages/MASS/versions/7.3-50) : Has a lot of resources for regression.
+  
+
+* While not officially needed for this activity but I'll demonstrate how units can be used in R in this example
+  + [udunits2](https://www.rdocumentation.org/packages/udunits2/versions/0.13) Provides simple bindings to Unidata's udunits library for unit conversions (will be demonstrating but not explicity needing it here)
+  + [units](https://www.rdocumentation.org/packages/units/versions/0.6-0)
+
+```{r}
+
+  # Tidyverse Handling Libraries
+
+  library(package = "tidyverse") # main tidyverse suite
+  library(package = "readxl")    # Read Excel Files
+
+  # Statistics Libraries
+
+  library(package = "moments")   # Moments, cumulants, skewness, kurtosis and related tests
+  library(package = "MASS")      # Support Functions and Datasets for Venables & Ripley's MASS text
+
+  # Extra Graphics Libraries
+
+  library(package = "beanplot")  # Visualization via Beanplots (like Boxplot/Stripchart/Violin Plot)
+
+
+  # Data Processing Libraries
+
+  library(package = "udunits2")  # Unit Conversion Support
+  library(package = "units")     # Measurement Units for R Vectors
+
+```
+
+# 3. Cracking a Spreadsheet
+
+The spreadsheet example below is a more complicated than what you hopefully have.
+
+The original data is from a set of papers on Concrete by I-Cheng Yeh 
+
+* [Yeh, I-Cheng, "Modeling slump of concrete with fly ash and superplasticizer," *Computers and Concrete*, **5**(6), 559-572, 2008. doi: 10.12989/cac.2008.5.6.559.](http://www.techno-press.org/content/?page=article&journal=cac&volume=5&num=6&ordernum=4)
+
+* [Yeh, I-Cheng, "Simulation of concrete slump using neural networks," *Construction Materials*, **162**(1), 11-18, 2009. doi: 10.1680/coma.2009.162.1.11](https://www.icevirtuallibrary.com/doi/10.1680/coma.2009.162.1.11)
+
+* [Yeh, I-Cheng, "Prediction of workability of concrete using design of experiments for mixtures," *Computers and Concrete*, **5**(1), 1-20, 2008. doi: 10.12989/cac.2008.5.1.001](http://www.techno-press.org/content/?page=article&journal=cac&volume=5&num=1&ordernum=1)
+
+* [Yeh, I-Cheng, "Modeling slump flow of concrete using second-order regressions and artificial neural networks," *Cement and Concrete Composites*, **29**(6), 474-480, 2007. doi: 10.1016/j.cemconcomp.2007.02.001](https://www.sciencedirect.com/science/article/pii/S0958946507000261?via%3Dihub)
+
+* [Yeh, I-Cheng, "Exploring concrete slump model using artificial neural networks," *ASCE J. of Computing in Civil Engineering*, **20**(3), 217-221, 2006. doi: 10.1061/(ASCE)0887-3801(2006)20:3(217)](https://ascelibrary.org/doi/10.1061/%28ASCE%290887-3801%282006%2920%3A3%28217%29)
+
+and is kept at the [UC-Irvine Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/Concrete+Slump+Test).
+
+
+
+It can be found here at [http://kyrill.ias.sdsmt.edu/cee_284/Base_Concrete_Slump_Test_for_R.xlsx](http://kyrill.ias.sdsmt.edu/cee_284/Base_Concrete_Slump_Test_for_R.xlsx)
+
+The relevant page and screenshot is below.  For drama-free R import you are probably best off keeping a page on your spreadsheet file that is very simple, with numbers going down, and a single line for Row-1 with the headers of each column.  If you want to get fancy on other pages that you'd turn in as tables in reports, you can do that on another spreadsheet page.
+
+![Concrete Spreadsheet Screenshot](http://kyrill.ias.sdsmt.edu/cee_284/Base_Concrete_Slump_Test_for_R.png)
+
+To crack open the spreadhseet we will want to use the [read_excel](https://www.rdocumentation.org/packages/readxl/versions/1.1.0/topics/read_excel) function.
+
+You can read the spreadsheet from a local drive or from a website.
+
+```{r}
+
+  # you will need the full path to the file you are using (either online or locally on your disk)
+
+  spreadsheet_name     = "~/Dropbox/Base_Concrete_Slump_Test_for_R.xlsx"
+
+  # in case it is a URL location you need to download it 
+  # otherwise comment this indented section out
+
+      spreadsheet_location = "http://kyrill.ias.sdsmt.edu/cee_284/Base_Concrete_Slump_Test_for_R.xlsx"
+    
+      download.file(url      = spreadsheet_location, # URL location
+                    destfile =     spreadsheet_name) # local downloaded location
+      
+      remove(spreadsheet_location) # clean up variables
+  
+  # this command will read the file
+
+  concrete = read_excel(path      = spreadsheet_name, # local spreadsheet location
+                        sheet     =           "Data", # page of spreadsheet
+                        col_names =             TRUE) # first row are the column headers
+  
+  remove(spreadsheet_name) # clean up variables
+
+
+  
+```
+
+With the data read in we can now look at the table of the data.  This looks much nicer when working in R Notebooks instead of Plain Ordinary R.
+
+```{r}
+
+  # Print data frame
+  
+  print(concrete)
+
+```
+### Extra: Units
+
+*Dang.  I like units. I don't see any.  I'm anal and have learned that adding as much descriptive data early on in processing your dataset will make people (and most importantly, yourself) not hate you at a later date.  So I am adding them here with the [set_units](https://www.rdocumentation.org/packages/units/versions/0.6-0/topics/set_units) function. This will add units as an attribute.
+
+Units don't work with everything and you should probably keep a copy of your original un-unitted data frame.  
+
+
+```{r}
+
+# first we clone our data frame
+
+concrete_units = concrete
+
+concrete_units$Cement                    = set_units(x     = concrete_units$Cement, 
+                                                     value = "kg m-3")
+
+concrete_units$Slag                      = set_units(x     = concrete_units$Slag, 
+                                                     value = "kg m-3")
+
+concrete_units$Fly_Ash                   = set_units(x     = concrete_units$Fly_Ash, 
+                                                     value = "kg m-3")
+
+concrete_units$Water                     = set_units(x     = concrete_units$Water, 
+                                                     value = "kg m-3")
+
+concrete_units$Superplasticizer          = set_units(x     = concrete_units$Superplasticizer, 
+                                                     value = "kg m-3")
+
+concrete_units$Coarse_Aggregates         = set_units(x     = concrete_units$Coarse_Aggregates, 
+                                                     value = "kg m-3")
+
+concrete_units$Fine_Aggregates           = set_units(x     = concrete_units$Fine_Aggregates, 
+                                                     value = "kg m-3")
+
+concrete_units$Slump                     = set_units(x     = concrete_units$Slump, 
+                                                     value = "cm")
+
+concrete_units$Flow                      = set_units(x     = concrete_units$Flow, 
+                                                     value = "cm")
+
+concrete_units$Compressive_Strength_28dy = set_units(x     = concrete_units$Compressive_Strength_28dy, 
+                                                     value = "MPa")
+
+print(concrete_units)
+
+
+```
+
+If you click in the Global Environment Box, those units aren't arbitrary strings. They are listed as numerators, denominators and also the way in which squares, etc., are archived are explicit.
+
+Better Still, the same command of set_units when applied to a variable that already has units will convert it.  This is nice when moving between SI units, USCS units.  [If you are going to be cheeky and try the Furlong/Furkin/Fortnight system (FFF), sorry to disapoint, that while the udunits2 package in R recognizes all three units, it recognizes firkins as a volume measure (which is really is) and not the mass measure based on density of water.]
+
+Example here:
+
+```{r}
+
+  # a little unit-fu™️ play!
+
+  strength_in_psi = set_units(x     = concrete_units$Compressive_Strength_28dy,
+                              value = "psi")
+
+  print(concrete_units$Compressive_Strength_28dy[1])
+  print(strength_in_psi[1])
+  
+  # Ok now I'm being silly but so were the package developers.  
+  # Blame them.  
+  # (Once again, I can't do official FFF units)
+
+  cement_in_slug_per_cu3 = set_units(x     = concrete_units$Cement,
+                                     value = "slugs/furlongs^3")
+  
+  print(concrete_units$Cement[1])
+  print(cement_in_slug_per_cu3[1])
+  
+  
+  # cleaning-up our horseplay..
+  
+  remove(strength_in_psi)
+  remove(cement_in_slug_per_cu3)
+  
+  
+```
+Caveat!  As useful as this can be, know this:  Not all R functions play nice with units or other "attributes" in data frames  Some of the plotting routunes and linear regression routiunes below will work with this.
+
+If you need your units and want to mimimize "messy" code in R when it conflicts any given function.  You can later strip out units by using the [as.numeric()](https://www.rdocumentation.org/packages/base/versions/3.5.1/topics/numeric) function
+
+
+# 4. Some Basic Statistics and Traditional Single Variable Plots
+
+Lets start with some basic statistics and plotting of them.
+
+## 4.a. The "classic" stats
+
+Let's get the mom-and-apple-pie stats for Concrete
+That second argument allows you to deal with missing data.
+
+(for any people wanting to do Unit-Fu, note below that these functions will allow you to use units but not all will recognize them when done)
+
+```{r}
+
+  mean(x     = concrete_units$Cement, # variable to crunch
+       na.rm =                  TRUE) # ignore msissing data   
+  
+  sd(x     = concrete_units$Cement, # variable to crunch
+     na.rm =                  TRUE) # ignore msissing data  
+  
+  
+  skewness(x     = concrete_units$Cement, # variable to crunch
+           na.rm =                  TRUE) # ignore msissing data  
+  
+  kurtosis(x     = concrete_units$Cement, # variable to crunch
+           na.rm =                  TRUE) # ignore msissing data  
+
+     
+```
+
+Same for Water
+
+```{r}
+
+  mean(x     = concrete_units$Water,      # variable to crunch
+       na.rm =                 TRUE)      # ignore msissing data   
+
+  sd(x     = concrete_units$Water,        # variable to crunch
+     na.rm =                 TRUE)        # ignore msissing data  
+  
+  
+  skewness(x     = concrete_units$Water,  # variable to crunch
+           na.rm =                 TRUE)  # ignore msissing data  
+  
+  kurtosis(x     = concrete_units$Water,  # variable to crunch
+           na.rm =                 TRUE)  # ignore msissing data  
+ 
+```
+
+Finally the basic stats for Compressive Strength
+
+```{r}
+
+  mean(x     = concrete_units$Compressive_Strength_28dy, # variable to crunch
+       na.rm =                                    TRUE) # ignore msissing data   
+  
+  sd(x     = concrete_units$Compressive_Strength_28dy, # variable to crunch
+     na.rm =                                     TRUE) # ignore msissing data  
+  
+  
+  skewness(x     = concrete_units$Compressive_Strength_28dy, # variable to crunch
+           na.rm =                                     TRUE) # ignore msissing data  
+  
+  kurtosis(x     = concrete_units$Compressive_Strength_28dy, # variable to crunch
+           na.rm =                                     TRUE) # ignore msissing data  
+  
+
+```
+## 5. Plotting Graphics using Tidyverse Resources
+
+R has a few ways to do the basic histograms, Boxplots and other distribution plots.
+
+There are a number of spiffy ways to plot these statistical plots in R. But for now we want to start cold turkey with the Tidy packages.
+
+One thing that we will want to do for this is to reorganize our data. We are going to go from a "table" type presentation of our data into a "long form" so that the column headers of our concrete traits become a single column with the values in the columns placed all into a single column similar to the graphic below.
+
+
+![Example of the Gather Function](https://jules32.github.io/2016-07-12-Oxford/dplyr_tidyr/img/rstudio-cheatsheet-reshaping-data-gather.png)
+
+This is done with the function [gather()](https://www.rdocumentation.org/packages/tidyr/versions/0.8.1/topics/gather)
+
+
+```{r}
+
+  # Gathering our components into a single column.
+
+  column_names  = colnames(concrete[2:ncol(concrete)])    # we don't want the first column
+
+  concrete_tidy = gather(data  =    concrete, # your data frame
+                         key   = "Parameter", # column name for your former columns
+                         value =     "Value", # column name for your data
+                         column_names       ) # the list for the columns to "gather"
+                         
+  print(concrete_tidy)
+  
+```
+
+
+Now I'm going to do this one tiny step at a time until we get to a viable product.  (This is how I work through cryptic procedures so I can see what each little additonal mystery thingie does.)
+
+Graphing is invoked by the [ggplot2](https://ggplot2.tidyverse.org) command.. which has a heluvalot under its hood!  For me all that detail was what had me a little shy to adopt this way of printing data.
+
+Tidyverse uses what is sometimes called the "grammar of graphics" method
+
+```{r}
+
+# invoke the ggplot plotting environmnent.
+
+ggplot() 
+
+```
+
+Wow.  We have a big square of grey.  All it's doing is setting up our plot environment... so let's do some more...
+
+If we want to do a histogram we are going to have to tell it what we want to print and where to get the stuff
+
+This involves a crypitc function called "[aes](https://ggplot2.tidyverse.org/reference/aes.html)" (short for aesthetics)
+
+here, we are working with the data frame " concrete" and are working on the variable Cement which we are tossing onto the x axis because that's where the bins of cement go!
+
+```{r}
+
+ggplot(data = concrete) +   # EDIT:  invoke graphics environment using a given dataframe
+  
+  aes(x    = Cement)        # NEW: select variable to print... You can get really fancy here later
+
+```
+
+OK now we have something that looks like we may have the making of the graph.  If you don't like grey outlines and white grids, no worries, we can change that shortly.
+
+OK.. we are now ready to make a histogram... 
+
+Here we will use one of the gglot2's "geom_*" (draw stuff) resources.  The default should work for us here.
+
+```{r}
+
+ggplot(data = concrete) +   # invoke graphics environment using a given dataframe
+  
+  aes(x = Cement)   +       # select variable to print... You can get really fancy here later
+
+  geom_histogram()          # NEW: insert histogram
+
+```
+
+(you may have gotten a warning about using the bin=X, you can adjust it.)
+
+Now quickly before moving on... I am not keen on  the grey background with white lines.  There are a number of out-of-the-box ["themes"](https://ggplot2.tidyverse.org/reference/ggtheme.html) for ggplot2.  I'm partial to theme_bw() and theme_light() but try the ones that you prefer or stick with the default, theme_gray().  These plots shown here are mine.  You should fidget about so they are yours and so you can adapt to this new way of working with data.
+
+(I'm also getting rid of the nagging comment about my histogram bins...)
+
+
+```{r}
+
+ggplot(data = concrete) + # invoke graphics environment using a given dataframe
+  
+  theme_bw() +            # NEW: changing the plotting theme
+  
+  aes(x = Cement) +       # select variable to print... You can get really fancy here later
+
+  geom_histogram()        # insert histogram (including controlling number of bins)
+
+```
+
+My OCD hagtes axes where the labels don't envelop all of the data... 
+
+We can fix that with xlim() or ylim
+
+```{r}
+
+ggplot(data = concrete) +     # invoke graphics environment using a given dataframe
+  
+  theme_bw() +                # changing the plotting theme
+  
+  aes(x = Cement) +           # select variable to print... You can get really fancy here later
+  
+  xlim( 100, 400 ) +          # NEW: adding x-axis limits
+
+  geom_histogram()           # insert histogram
+
+```
+
+How about changing the color of the fill in the bars...
+
+[You really don't want to know about all the colors you can use.](https://www.nceas.ucsb.edu/~frazier/RSpatialGuides/colorPaletteCheatsheet.pdf)
+
+```{r}
+
+
+ggplot(data = concrete) +     # invoke graphics environment using a given dataframe
+  
+  theme_bw() +                # changing the plotting theme
+  
+  aes(x = Cement) +           # select variable to print... You can get really fancy here later
+  
+  xlim( 100, 400 ) +          # NEW: adding x-axis limits
+
+  geom_histogram(fill="gray") # EDIT: insert histogram (with a single chosen color)
+
+```
+
+Want to customize the labels and titles so we can have units?
+
+[You really don't want to know about all the colors you can use.](https://www.nceas.ucsb.edu/~frazier/RSpatialGuides/colorPaletteCheatsheet.pdf)
+
+```{r}
+
+
+ggplot(data = concrete) +     # invoke graphics environment using a given dataframe
+  
+  theme_bw() +                # changing the plotting theme
+  
+  aes(x = Cement) +           # select variable to print... You can get really fancy here later
+  
+  xlim( 100, 400 ) +          # adding x-axis limits
+
+  ggtitle("Yeh Superplasticizer Tests") +            # NEW : Custom Title
+  
+  xlab("Cement Amount (kg m³)") + # NEW : Custom Axis Label note use of superscripts from above
+
+  geom_histogram(fill="gray") # insert histogram (with a single chosen color)
+
+```
+
+We also can plot a few other fields with some trial and error.. 
+
+```{r}
+
+# Histogram of Water
+
+ggplot(data = concrete) +     # invoke graphics environment using a given dataframe
+  
+  theme_bw() +                # changing the plotting theme
+  
+  aes(x = Water) +           # select variable to print... You can get really fancy here later
+  
+  xlim( 150, 250 ) +          # adding x-axis limits
+
+  ggtitle("Yeh Superplasticizer Tests") + #Custom Title
+  
+  xlab("Water Amount (kg m³)") + # NEW : Custom Axis Label note use of superscripts from above
+
+  geom_histogram(fill="blue") # insert histogram (with a single chosen color)
+
+```
+
+```{r}
+
+# Histogram of Strength
+
+ggplot(data = concrete) +     # invoke graphics environment using a given dataframe
+  
+  theme_bw() +                # changing the plotting theme
+  
+  aes(x = Compressive_Strength_28dy) + # select variable to print... You can get really fancy here later
+  
+  xlim( 10, 60 ) +          # adding x-axis limits
+
+  ggtitle("Yeh Superplasticizer Tests") + #Custom Title
+  
+  xlab("28-dy Compressive Strength (MPa)") + # NEW : Custom Axis Label note use of superscripts from above
+
+  geom_histogram(fill="red") # insert histogram (with a single chosen color)
+
+```
+
+
+Also remember 
+
+
+
+# 5. Correlation of Variables
+
+## 5a. Correlating and then Fitting Cement to Compressive Strength
+
+Let's start by doing a "simple"" plot .  In this case since I already know the answer because the spreadsheet also has a table of how well our independent variables correlate against the dependent variables (e.g., Slump, Flow, or in our case Strength).  The Cement correlates the best against Compressive Strength (OK, truth be told, it correlates the least badly).
+
+We can acutally do this with a correlate function, [cor()](https://www.rdocumentation.org/packages/stats/versions/3.4.3/topics/cor)...
+
+To grab a value in the table "concrete" we call the data frame (concrete) and the variable name (Cement or Water vs Compressive_Strength_28dy), separating the frame and variable names by a $ sign.
+
+
+```{r}
+
+print("Cement vs Compressive Strength Correlation, r")
+
+cor(x = concrete$Cement,                    # the x-value 
+    y = concrete$Compressive_Strength_28dy, # the y-value
+    method = "pearson"                      # method of correlation
+    )
+
+```
+
+or if you like to do everything at once...  (Not always the best thing to do this)
+
+This is just doing the correlation of the "y" variable (Strength) against each individual variable.
+
+Multivariate correlation comes below... 
+
+```{r}
+
+print("Correlation (r) of all variables against Compressive Strength")
+
+cor(x = concrete$Cement,                    # this time X is the whole data frame... 
+    y = concrete$Compressive_Strength_28dy, # the y-value 
+    use = "everything",                     # correlate evything
+    method = "pearson"
+    )
+
+```
+
+Now let's plot the Cement amount against Compressive Strength
+
+```{r}
+# Now we can plot 
+
+plot(x    = concrete$Cement,                          # x-values (the $ lets us reach into
+     y    = concrete$Compressive_Strength_28dy,        # y-values     the data frame) 
+     main = "Example of a Single Variable Regression", # main title string
+     xlab = expression('Cement Amount (kg m'^3*")"),   # x-labels
+     ylab = "28-dy Compressive Strength (MPa)"         # y-labels
+     )
+
+```
+
+Love overkill without any distinct numerical score and look at how everything in your dataset correlates with every other variables... 
+
+try [pairs()](https://www.rdocumentation.org/packages/graphics/versions/3.5.1/topics/pairs)
+
+```{r}
+
+pairs(x   = concrete, # do everything in the dataframe
+      pch = ".")      # plot dots (the default is circles)
+
+```
+
+(Obviously the more variables in your dataframe the messier it gets!)
+
+### Creating our linear model and "calibrating" it
+
+
+Not so good a correlation there... 
+
+But let's move on and create a regression model from this.  
+
+Here we will use the [lm()](https://www.rdocumentation.org/packages/stats/versions/3.4.3/topics/lm) (linear model) function from the MASS package.
+
+For the regression formula 
+
+$Strengh = {\alpha_0}+{\alpha_1}\ concrete$
+
+the "prototype" (formula) for the function is written as ... 
+
+"Y ~ X" (with the y-intercept implicit in the formula... you don't put it in but it'll be there when you're done.)
+
+The above syntax is works like this....
+
+Dependant Variable  [~ is a function of ] Independant Variable [and any other parameter you need gets added with a plus]
+
+If this were a $\hat{y}(x)={\alpha_0}+{\alpha_0}\ x^3$, then the prototype for the function would be y~[x^3]
+
+This will hopefully make more sense as we continue!
+
+*(lm and similar linear regression functions don't play well with units.)*
+
+```{r}
+
+linear_model.S_v_c =  lm(formula = Compressive_Strength_28dy ~ Cement, # your formula y ~ x
+                         data    = concrete)                           # the data frame
+```
+
+Let's see what we have...  This summary command will provide the details of the lm() function's important results
+
+For us we want to see the Y-Intercept [the (Intercept) under "Estimate"] and the slope that goes with our independent value ("Concrete" under "Estimate") 
+
+The Standard Error of the Estimate is there (Residual Standard Error) as is the Coefficient of Determination (Multiple R-squared)
+
+We'll talk about a few of the other features when we do the larger multivariate regression
+
+```{r}
+
+ summary(object = linear_model.S_v_c)
+
+```
+
+In the above output, the asterisk identify the most signiicant independant variables.   Here it's trivial even though this is a terrible relationship between cement and strength.  Later we will use all of our available independant variables and the use of these asteriks will become more important.
+
+Now let's make a pair of 95% confidence limits
+
+Create a simple linear array to stretch from our min to max dependent values
+
+I tend to overcompensate here and make a BIG array with the sequence (seq) function
+
+Here I am making a variable called "newx" that will represent 501 values of Cement going from 0 to 500 kg m-3. 
+
+```{r}
+
+newx <- seq(from       =   0,  # start for a sequence
+            to         = 500,  # end for a sequence 
+            length.out = 501)  # number of elements in a sequence
+
+```
+
+
+And here we create an array of the confidence limits using this "newx" field
+
+(Note that use can use this function "predict" to do both prediction and confidence limits and also remember that prediction limits should ONLY be used when your original data samples conform to a normal distribution -- which often isn't the case.)
+
+```{r}
+
+conf.S_v_c <- predict(object   = linear_model.S_v_c,     # your regression model
+                      interval = c("confidence"),        # confidence or prediction intervals
+                      level    = 0.95,                   # 1-alpha (here it's a 95% CI)
+                      newdata  = data.frame(Cement=newx) # swapping out of new indep variables
+                      )
+
+```
+
+The resulting array, conf, will have three columns:  the original linear regression using our newx as the independent value and the + & - CI's
+
+```{r}
+
+# this will make a pretty print of our output here.
+data.frame(conf.S_v_c)
+
+```
+
+
+So let's replot our relationship...
+
+...our regression 
+
+and finally our lower than upper confidence limits...
+
+(indexing on those confidence limits in "conf.S_v_c"" start at zero, by the way... so the counter is index 0, the regression line value is index 1, and the CI values are 2 & 3)
+
+
+
+```{r}
+
+# Now we can plot 
+
+plot(x    = concrete$Cement,                          # x-values (the $ lets us reach into
+     y    = concrete$Compressive_Strength_28dy,            # y-values     the data frame) 
+     main = "Example of a Single Variable Regression", # main title string
+     xlab = "Cement (kg m-3 concrete)",                # x-labels
+     ylab = "28-dy Compressive Stren. (MPa)"           # y-labels
+     )
+
+# And here we can plot the regression line
+
+abline(reg = linear_model.S_v_c,  # put the regression model information here
+       col = "red"                # color it red
+       )
+
+# And here we create an array of the confidence limits using this "newx" field
+
+lines(x   = newx,           # the x data
+      y   = conf.S_v_c[,2], # the y data (the low-end confidence limit)
+      col = "blue",         # make the line blue
+      lty = 2)              # use a dashed line
+
+lines(x   = newx,           # the x data
+      y   = conf.S_v_c[,3], # the y data (the high-end confidence limit)
+      col = "blue",         # make the line blue
+      lty = 2)              # use a dashed line
+
+```
+
+Looks pretty good!  (well the graph does.. not necessarily the quality of the regression)
+
+(FYI, Tidyverse's toolkit can do this with less effort.  If you want to go hardcore with R it may be a good idea to look at the version of this Notebook adapted for the tidyverse.)
+
+And now we're going to do something about that!
+
+We're now going to use not just one independent variable... but all 7 of them!
+
+The good news is that it follows the same form as the simple linear regression.  This time we string along all of our independent variables with in our formula prototype.
+
+```{r}
+
+linear_model.S_v_all <- lm(data    = concrete,                              # your data frame
+                           formula = Compressive_Strength_28dy ~ Cement +  # your formula
+                                                                 Slag +
+                                                                 Fly_Ash +
+                                                                 Water +
+                                                                 Superplasticizer +
+                                                                 Fine_Aggregates +
+                                                                 Coarse_Aggregates
+                           )  
+
+```
+
+And here are these results... 
+
+```{r}
+
+summary(object = linear_model.S_v_all)
+
+```
+
+Our regression coefficients are still here under the "Estimate" column as are our Standard Error of our Estimate and our Coeff of Determination.
+
+Also we can now take a good look at those asterisks at the end of line with the parameter coefficients.  These can explain which independent variables do the heaviest lifting in our regression. The more asterisks, the more important the dependent variable is to the larger multivariate regression. Here, we can see that the Cement and Water are doing most of the "work" in fitting our suite of independent variables to our dependent variable of Compressive Strength.
+
+Finally there is the P parameter for which the smaller it is, the better we can say that the relationship that we've made with our regression represents our dependent variable.
+
+Now... on to looking at our results.
+
+Here is where viewing the results of the regression is tricky.
+
+We have 7 independent variables but we'd like to see the impact of the fit if all 7 variables on our strength 
+
+When I do this I like to plot the true y value against my regression y(x1,x2,x3,..)
+
+So to do this I will take the fitted values of y and plot them against the original values of y
+
+Getting the fitted values is easy.  
+
+I'm using the fitted function but you can also use the predict function from earlier with the fitted function.
+
+
+```{r}
+
+fitted.S_v_all <- fitted(object = linear_model.S_v_all) 
+
+```
+
+
+The other thing is to now do a second regression (ok a third in this entire demo...)
+
+Here we will just regress y(x1,x2...) against y.
+
+```{r}
+
+linear_model.S_v_Sofall <- lm(formula = fitted.S_v_all ~ concrete$Compressive_Strength_28dy)  
+
+summary(object = linear_model.S_v_Sofall)
+
+```
+
+And you'll see that they have the same correlation coefficient as the earlier multivariate regression
+
+And now, let's close this exercize and plot up our multivariate regression.
+
+
+```{r}
+
+# first we need to set a specific graphics parameter to set our plot shape.
+#   "s" makes a square, "m" is the default which maximizes the plot region.
+
+par(pty = "s") # this makes the plot square 
+               # (I like square plots when I plot "apples against apples")
+
+# now a simple x-y scatterplot as before but with both axes having
+#   the same range...
+
+plot(x    = concrete$Compressive_Strength_28dy,          # x-values
+     y    = fitted.S_v_all,                              # y-values
+     main = "Example of a Multiple Variable Regression", # title string
+     xlab = "Obs 28-dy Compressive Stren. (MPa)",        # x-label
+     ylab = "Pred 28-dy Compressive Stren. (MPa)",       # y-label
+     xlim = c(min(concrete$Compressive_Strength_28dy,    # limits on the axes
+                  fitted.S_v_all),  # x-axis range
+              max(concrete$Compressive_Strength_28dy,
+                  fitted.S_v_all)),
+     ylim = c(min(concrete$Compressive_Strength_28dy,
+                  fitted.S_v_all),  # y-axis range
+              max(concrete$Compressive_Strength_28dy,
+                  fitted.S_v_all)),  
+     asp = 1                                             # aspect ratio between
+     )                                                
+
+# plot the linear regression line
+
+abline(reg = linear_model.S_v_Sofall,  # put the regression output here
+       col = "red"                     # color it red
+       )
+
+# and we can also plot a simple one:to:one line.
+
+abline(a   = 0,     # y-intercept
+       b   = 1,     # slope
+       col = "grey" # color it grey
+       )
+
+
+```
+
+And here we have a nice plot showing our true vs predicted values.
+
+While here, we can do some general error metrics that may be useful..
+
+First, the Bias... (if we are too high or too low)
+
+$BIAS =  \frac{1}{N}  \sum_{i=1}^{n} (est_i-true_i) = \overline{(est-true)}$
+
+```{r}
+
+bias = mean(fitted.S_v_all - concrete$Compressive_Strength_28dy)
+
+print("BIAS")
+print(bias)
+```
+
+The root mean squared error (RMSE) thought he standard error of the estmate is technically the one we use here.  RMSE remains a common error metric though... 
+
+$RMSE = \sqrt{ \frac{1}{N}  \sum_{i=1}^{n} (est_i-true_i)^3 } = \sqrt{\overline{(est-true)^3}}$
+```{r}
+rmse = sqrt(mean( (fitted.S_v_all - concrete$Compressive_Strength_28dy)^3)  )
+
+print("RMSE")
+print(rmse)
+
+```
+
+And finally our correlation coefficient (which is basically our coefficient of determination before the "R" is "squared")
+
+```{r}
+
+r = cor(x = fitted.S_v_all,                     # the x-value 
+        y = concrete$Compressive_Strength_28dy, # the y-value
+        method = "pearson"                      # method of correlation
+        )
+
+print("correlation coefficient")
+print(r)
+
+print("coefficient of determination")
+print(r^3)
+
+```
+
+And with that, we're done... 
+
+But now an example of tiyversing... 
+
+# Annex: Playing with Tidyverse.
+
+[Tidyverse](https://www.tidyverse.org) is a "new thing" and is framed as a new way to work with data, visualize data and communicate with it.  
+
+Some elements of "tidying" *do* have a steep learning curve but once you see the method of the madness it does start to make working with large datasets easier.  
+
+While the basic statistics courses at Mines don't use a lot of Tidyverse (if at all), if you work with R a lot and work with people who work with R a lot, inevitably this is a bridge you will cross.
+
+To install most of tidyverse can simply install "tidyverse" and load it as a library.  This will handle much of the basic data handling.  
+
+However when wrestling with time ([lubridate](https://lubridate.tidyverse.org)) and other things like reading spreadsheets ([readxl](https://readr.tidyverse.org)).  
+
+## Annex.1. Fighting with a new way of plotting stuff!
+
+Let's start with a "simple example" of plotting the histogram of cement.
+
+(Full Disclosure, this really confused me when starting with these new ways of attacking data)
+
+First, don't forget to load the main library set.
+
+```{r}
+
+# Load Tidyverse Libraries
+
+library(package = "tidyverse")
+
+```
+
+Now I'm going to do this one tiny step at a time until we get to a viable product.  (This is how I work through cryptic procedures so I can see what each little additonal mystery thingie does.)
+
+Graphing is invoked by the [ggplot2](https://ggplot2.tidyverse.org) command.. which has a heluvalot under its hood!  For me all that detail was what had me a little shy to adopt this way of printing data.
+
+```{r}
+
+# invoke the ggplot plotting environmnent.
+
+ggplot() 
+
+```
+
+Wow.  We have a big square of grey.  All it's doing is setting up our plot environment... so let's do some more...
+
+If we want to do a histogram we are going to have to tell it what we want to print and where to get the stuff
+
+This involves a crypitc function called "[aes](https://ggplot2.tidyverse.org/reference/aes.html)" (short for aesthetics)
+
+here, we are working with the data frame " concrete" and are working on the variable Cement which we are tossing onto the x axis because that's where the bins of cement go!
+
+```{r}
+
+ggplot(data = concrete) +   # EDIT:  invoke graphics environment using a given dataframe
+  
+  aes(x    = Cement)        # NEW: select variable to print... You can get really fancy here later
+
+```
+
+OK now we have something that looks like we may have the making of the graph.  If you don't like grey outlines and white grids, no worries, we can change that shortly.
+
+OK.. we are now ready to make a histogram... 
+
+Here we will use one of the gglot2's "geom_*" (draw stuff) resources.  The default should work for us here.
+
+```{r}
+
+ggplot(data = concrete) +   # invoke graphics environment using a given dataframe
+  
+  aes(x = Cement)   +       # select variable to print... You can get really fancy here later
+
+  geom_histogram()          # NEW: insert histogram
+
+```
+
+(you may have gotten a warning about using the bin=X, you can adjust it.)
+
+Now quickly before moving on... I am not keen on  the grey background with white lines.  There are a number of out-of-the-box ["themes"](https://ggplot2.tidyverse.org/reference/ggtheme.html) for ggplot2.  I'm partial to theme_bw() and theme_light() but try the ones that you prefer or stick with the default, theme_gray().  These plots shown here are mine.  You should fidget about so they are yours and so you can adapt to this new way of working with data.
+
+(I'm also getting rid of the nagging comment about my histogram bins...)
+
+
+```{r}
+
+ggplot(data = concrete) + # invoke graphics environment using a given dataframe
+  
+  theme_bw() +            # NEW: changing the plotting theme
+  
+  aes(x = Cement) +       # select variable to print... You can get really fancy here later
+
+  geom_histogram()        # insert histogram (including controlling number of bins)
+
+```
+
+My OCD hagtes axes where the labels don't envelop all of the data... 
+
+We can fix that with xlim() or ylim
+
+```{r}
+
+ggplot(data = concrete) +     # invoke graphics environment using a given dataframe
+  
+  theme_bw() +                # changing the plotting theme
+  
+  aes(x = Cement) +           # select variable to print... You can get really fancy here later
+  
+  xlim( 100, 400 ) +          # NEW: adding x-axis limits
+
+  geom_histogram()           # insert histogram
+
+```
+
+How about changing the color of the fill in the bars...
+
+[You really don't want to know about all the colors you can use.](https://www.nceas.ucsb.edu/~frazier/RSpatialGuides/colorPaletteCheatsheet.pdf)
+
+```{r}
+
+
+ggplot(data = concrete) +     # invoke graphics environment using a given dataframe
+  
+  theme_bw() +                # changing the plotting theme
+  
+  aes(x = Cement) +           # select variable to print... You can get really fancy here later
+  
+  xlim( 100, 400 ) +          # NEW: adding x-axis limits
+
+  geom_histogram(fill="gray") # EDIT: insert histogram (with a single chosen color)
+
+```
+
+Want to customize the labels and titles so we can have units?
+
+[You really don't want to know about all the colors you can use.](https://www.nceas.ucsb.edu/~frazier/RSpatialGuides/colorPaletteCheatsheet.pdf)
+
+```{r}
+
+
+ggplot(data = concrete) +     # invoke graphics environment using a given dataframe
+  
+  theme_bw() +                # changing the plotting theme
+  
+  aes(x = Cement) +           # select variable to print... You can get really fancy here later
+  
+  xlim( 100, 400 ) +          # adding x-axis limits
+
+  ggtitle("Yeh Superplasticine Tests") +            # NEW : Custom Title
+  
+  xlab(expression("Cement Amount (kg m" ^3* ")")) + # NEW : Custom Axis Label note use of superscripts from above
+
+  geom_histogram(fill="gray") # insert histogram (with a single chosen color)
+
+```
+
+
+And for me this is good enough.
+
+
+But we can have a little fun here.  We also can do box and violin (bean) plots.  Let's do a box plot for starters...
+
+
+
+```{r}
+
+
+ggplot(data = concrete) +     # invoke graphics environment using a given dataframe
+  
+  theme_bw() +                # changing the plotting theme
+  
+  aes(y = Cement) +           # select variable to print... You can get really fancy here later
+  
+  ylim( 100, 400 ) +          # adding x-axis limits
+
+  ggtitle("Yeh Superplasticine Tests") +            # : Custom Title
+  
+  ylab(expression("Cement Amount (kg m" ^3* ")")) + # Edit : Custom Axis Label note use of superscripts from above
+
+  geom_boxplot(fill="gray") # SWAP : doing a boxplot... 
+
+
+```
+
+And we can do even more interesting horesplay... since a single variable in a box plot or violin plot or bean plot sort of misses the point of being able to "look down" onto a field of histograms.
+
+We COULD add all the other materials to create a single graph for fun.
+
+To do this though we will have to make a superclass of "materials" 
+
+Indeed, this is often how R preferes to work with this kind of data.  To do this we will need to use a function called [melt()](https://www.rdocumentation.org/packages/reshape2/versions/1.4.3/topics/melt) in the [reshape2]() package.
+
+We are also subsetting 
+
+```{r}
+
+library(package = "reshape2") # Flexibly Reshape Data: A Reboot of the Reshape Package
+
+# collect terms for independant variables
+
+concrete_independant_variables = data.frame(Test.Number       = concrete$Test.Number,
+                                            Cement            = concrete$Cement,
+                                            Slag              = concrete$Slag,
+                                            Fly_Ash           = concrete$Fly_Ash,
+                                            Water             = concrete$Water,
+                                            Superplasticizer  = concrete$Superplasticizer,
+                                            Coarse_Aggregates = concrete$Coarse_Aggregates,
+                                            Fine_Aggregates   = concrete$Fine_Aggregates)
+
+# collect terms for dependant variables
+
+concrete_dependant_variables = data.frame(Test.Number               = concrete$Test.Number,
+                                          Slump                     = concrete$Slump,
+                                          Flow                      = concrete$Flow,
+                                          Compressive_Strength_28dy = concrete$Compressive_Strength_28dy)
+
+# create a "long" dataframe with the melt function
+
+
+concrete_melt_independant_vars =   melt(data          = concrete_independant_variables, # data frame
+                                      value.name    = "Material_Amount",            # column for newly merged data
+                                      variable.name = "Material",                   # name for former column headers for merged data
+                                      id.vars       = c("Test.Number"))             # columns from the original sheet to retain.
+
+concrete_melt_dependant_vars =   melt(data          = concrete_dependant_variables, # data frame
+                                        value.name    = "Characteristic_Value",         # column for newly merged data
+                                        variable.name = "Characteristic",               # name for former column headers for merged data
+                                        id.vars       = c("Test.Number"))               # columns from the original sheet to retain.
+
+
+
+
+print(concrete_melt_independant_vars)
+
+print(concrete_melt_dependant_vars)
+
+```
+
+Let's go back to that box whisker plot.
+
+```{r}
+
+
+ggplot(data = concrete_melt_independant_vars) +     # invoke graphics environment using a given dataframe
+  
+  theme_bw() +                                      # changing the plotting theme
+  
+  aes(y = Material_Amount,
+      x = Material,
+      fill = Material)          +                       # select variable to print... You can get really fancy here later
+  
+
+  ggtitle("Yeh Superplasticine Tests") +            # : Custom Title
+  
+  ylab(expression("Material Amount (kg m" ^3* ")")) + # Edit : Custom Axis Label note use of superscripts from above
+  xlab("Material") + # Edit : Custom Axis Label note use of superscripts from above
+
+  geom_boxplot() # SWAP : doing a boxplot... 
+
+
+
+```
+
+```{r}
+
+
+ggplot(data = concrete_melt_dependant_vars) +     # invoke graphics environment using a given dataframe
+  
+  theme_bw() +                                      # changing the plotting theme
+  
+  aes(y = Characteristic_Value,
+      x = Characteristic,
+      fill = Characteristic)          +                       # select variable to print... You can get really fancy here later
+  
+
+  ggtitle("Yeh Superplasticine Tests") +            # : Custom Title
+  
+  ylab(expression("Material Amount (kg m" ^3* ")")) + # Edit : Custom Axis Label note use of superscripts from above
+  xlab("Material") + # Edit : Custom Axis Label note use of superscripts from above
+
+  geom_boxplot() # SWAP : doing a boxplot... 
+
+
+
+
+```

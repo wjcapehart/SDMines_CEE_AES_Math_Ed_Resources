@@ -1,257 +1,299 @@
 ---
-title: 'R Multivariate Regression Sandbox'
+title: Intro to Stats and Regression from a Spreadsheet using R with a little bit
+  of fun using units
 output:
   html_notebook: default
-  html_document: default
   pdf_document: default
----
+  html_document: default
+--- 
 
-## R Markdown and Notebooks
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
 
-This is an [R Studio Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
+Try executing each R "chunk" by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
 
-(Caution: Typos are Legion)
+**Warning. Typos are Legion!**
 
-When in our school's Math Statistics courses, R is a typical platform that will be used in the classroom.  
+# 1. Intro
 
-R is open source and can be aquired here.
+The goal here is to demonstrate cracking open an excel spreadsheet in R and doing some basic stats.
 
-[https://www.r-project.org](https://www.r-project.org)
+# 2. Loading the Libraries
 
-Since R is open source and is commonly used by a broad community it has gotten a large following.  Also since it's open source there are a HUGE number of discipline-specific packages.  (Many of them don't necessarly do statistics but since R is free...)  
+To work with R we will first have to load some libraries.  This is like in C where you have the #include statement to do things like raise things to powers and stuf like that.
 
-A common workbench that is used with R is R-Studio which also has an open-source version that you can download from here.
+Some of these libaries or "packages" come with R.  Others will have to be installed.  They are indicatred here for this exercise.
 
-This demonstrates using R to preform a multivariate regression on the Concrete Dataset
+* Install Us First
+  + [moments](https://www.rdocumentation.org/packages/moments/versions/0.14) : This has a load of good stuff for data analysis and plotting, more than you will need here but get it anyway.
+  + [readxl](https://www.rdocumentation.org/packages/readxl/versions/1.1.0) : part of the (tidyverse)[https://www.tidyverse.org] package suite for reading traditional excel spreadsheets.  In the long-run you probably also want to install the tidyverse package suite anyway.
+  + [beanplot](https://www.rdocumentation.org/packages/beanplot/versions/1.2) Allows you to plot what is called a "beanplot" which, like it's cousin, the violin plot, shows nuances of a variables distribution (helpful when working with irregular distributions)
 
-[https://www.rstudio.com](https://www.rstudio.com)
-
-R Studio also has support to bring in the many libraries that are available.
-
-This particular example leverages this dataset. 
-
-[http://kyrill.ias.sdsmt.edu/cee_284/L20_Non_Linear_Regression_Sandbox.xlsx](http://kyrill.ias.sdsmt.edu/cee_284/L20_Non_Linear_Regression_Sandbox.xlsx)
-
-You can download it to your machine and make a small edit further down to access it with R.
-
-You will need the following packages and their dependencies whcih can be installed with R Studio before you start.
-
-* XLConnect [The XLConnect Package] for reading spreadsheets, 
-* MASS      [Functions and datasets to support Venables and Ripley, "Modern Applied Statistics with S"]. and 
-* plyr      [Tools for Splitting, Applying and Combining Data]
-* e1071     [Misc Functions of the Department of Statistics, Probability Theory Group] for getting skewness and kurtosis
-
-to access most of the linear regression activities here.
-
-And to do some of the fancy plots you;ll see you will want this one:
-
-* beanplot [Visualization via Beanplots (like Boxplot/Stripchart/Violin Plot)]
-
-Warning XLConnect will run off of Java and is therefore often a memory hog and a little pokey for large files but it gives you more control than other Excel R tools 
-
-This segment of the R code allows you to access these packages.
-
-(Notice the # character.  In R, the # denotes the start of a comment and can be on the same line as your code)
+  (with respect to tidyverse, it seems to be the "new thing" in R and a lot of my colleagues are using it so I am jumping on the bandwagon becasue being a lemming is fun...  martyrey but fun...  ok not fun... But still there are a lot of neat tricks in the tidyverse group of packages that, while they have a high leraning curve, do make some tasks easiser.  I will add an annex to this exdercise to show one example.) 
+  
+* This should come with R, if not install 'em.
+  + [MASS](https://www.rdocumentation.org/packages/MASS/versions/7.3-50) : Has a lot of resources for regression.
+  
+* Also part of the Tidyverse is a package that facilitates modifying your data so we can take our data and make multiple resources.
+  + [tidyr](https://tidyr.tidyverse.org)
+  
+* Not officially needed for this activity but I'll demonstrate how units can be used in R in this example
+  + [udunits2](https://www.rdocumentation.org/packages/udunits2/versions/0.13) Provides simple bindings to Unidata's udunits library for unit conversions (will be demonstrating but not explicity needing it here)
+  + [units](https://www.rdocumentation.org/packages/units/versions/0.6-0)
 
 ```{r}
 
-library(XLConnect) # Load the "Excel Connector for R" Library. (to load the spreadsheet data)
-library(MASS)      # Load the "Modern Applied Statistics with S Library"" (for regressions)
-library(plyr)      # Load the "Tools for Splitting, Applying and Combining Data" Library
-library(e1071)     # Load the "Misc Functions of the Department of Statistics, Probability Theory Group" Library
-library(beanplot)  # Load the "Visualization via Beanplots" Library
+  # Data Handling Libraries
 
+  library(package = "readxl")    # Read Excel Files
+
+  # Statistics Libraries
+
+  library(package = "moments")   # Moments, cumulants, skewness, kurtosis and related tests
+  library(package = "MASS")      # Support Functions and Datasets for Venables & Ripley's MASS text
+
+  # Graphics Libraries
+
+  library(package = "beanplot")  # Visualization via Beanplots (like Boxplot/Stripchart/Violin Plot)
+
+  # Tidyverses Libarires
+
+  library(package = "tidyr")     # It's designed specifically for data tidying (not general reshaping or aggregating)
+
+  # Data Processing Libraries
+
+  library(package = "udunits2")  # Unit Conversion Support
+  library(package = "units")     # Measurement Units for R Vectors
 ```
 
-## Fetching, Reading and Prepping our Dataset
+# 3. Cracking a Spreadsheet
 
-Now let's get the file holding our concrete data.
+The spreadsheet example below is a more complicated than what you hopefully have.
 
-First download the excel work book found here.
+The original data is from a set of papers on Concrete by I-Cheng Yeh 
 
-[http://kyrill.ias.sdsmt.edu/cee_284/L20_Non_Linear_Regression_Sandbox.xlsx](http://kyrill.ias.sdsmt.edu/cee_284/L20_Non_Linear_Regression_Sandbox.xlsx)
+* [Yeh, I-Cheng, "Modeling slump of concrete with fly ash and superplasticizer," *Computers and Concrete*, **5**(6), 559-572, 2008. doi: 10.12989/cac.2008.5.6.559.](http://www.techno-press.org/content/?page=article&journal=cac&volume=5&num=6&ordernum=4)
 
-You wil 
+* [Yeh, I-Cheng, "Simulation of concrete slump using neural networks," *Construction Materials*, **162**(1), 11-18, 2009. doi: 10.1680/coma.2009.162.1.11](https://www.icevirtuallibrary.com/doi/10.1680/coma.2009.162.1.11)
+
+* [Yeh, I-Cheng, "Prediction of workability of concrete using design of experiments for mixtures," *Computers and Concrete*, **5**(1), 1-20, 2008. doi: 10.12989/cac.2008.5.1.001](http://www.techno-press.org/content/?page=article&journal=cac&volume=5&num=1&ordernum=1)
+
+* [Yeh, I-Cheng, "Modeling slump flow of concrete using second-order regressions and artificial neural networks," *Cement and Concrete Composites*, **29**(6), 474-480, 2007. doi: 10.1016/j.cemconcomp.2007.02.001](https://www.sciencedirect.com/science/article/pii/S0958946507000261?via%3Dihub)
+
+* [Yeh, I-Cheng, "Exploring concrete slump model using artificial neural networks," *ASCE J. of Computing in Civil Engineering*, **20**(3), 217-221, 2006. doi: 10.1061/(ASCE)0887-3801(2006)20:3(217)](https://ascelibrary.org/doi/10.1061/%28ASCE%290887-3801%282006%2920%3A3%28217%29)
+
+and is kept at the [UC-Irvine Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/Concrete+Slump+Test).
+
+
+
+It can be found here at [http://kyrill.ias.sdsmt.edu/cee_284/Base_Concrete_Slump_Test_for_R.xlsx](http://kyrill.ias.sdsmt.edu/cee_284/Base_Concrete_Slump_Test_for_R.xlsx)
+
+The relevant page and screenshot is below.  For drama-free R import you are probably best off keeping a page on your spreadsheet file that is very simple, with numbers going down, and a single line for Row-1 with the headers of each column.  If you want to get fancy on other pages that you'd turn in as tables in reports, you can do that on another spreadsheet page.
+
+![Concrete Spreadsheet Screenshot](http://kyrill.ias.sdsmt.edu/cee_284/Base_Concrete_Slump_Test_for_R.png)
+
+To crack open the spreadhseet we will want to use the [read_excel](https://www.rdocumentation.org/packages/readxl/versions/1.1.0/topics/read_excel) function.
+
+You can read the spreadsheet from a local drive or from a website.
 
 ```{r}
 
-excel_file_name <- "/Users/wjc/Downloads/L20_Non_Linear_Regression_Sandbox.xlsx"
+  # you will need the full path to the file you are using (either online or locally on your disk)
+
+  spreadsheet_name     = "~/Dropbox/Base_Concrete_Slump_Test_for_R.xlsx"
+
+  # in case it is a URL location you need to download it 
+  # otherwise comment this indented section out
+
+      spreadsheet_location = "http://kyrill.ias.sdsmt.edu/cee_284/Base_Concrete_Slump_Test_for_R.xlsx"
+    
+      download.file(url      = spreadsheet_location, # URL location
+                    destfile =     spreadsheet_name) # local downloaded location
+      
+      remove(spreadsheet_location) # clean up variables
+  
+  # this command will read the file
+
+  concrete = read_excel(path      = spreadsheet_name, # local spreadsheet location
+                        sheet     =           "Data", # page of spreadsheet
+                        col_names =             TRUE) # first row are the column headers
+  
+  remove(spreadsheet_name) # clean up variables
+
+
+  
+```
+
+With the data read in we can now look at the table of the data.  This looks much nicer when working in R Notebooks instead of Plain Ordinary R
+
+```{r}
+
+  # Print data frame
+  
+  print(concrete)
+
+```
+### Extra: Units
+
+*Dang.  I like units. I don't see any.  I'm anal and have learned that adding as much descriptive data early on in processing your dataset will make people (and most importantly, yourself) not hate you at a later date.  So I am adding them here with the [set_units](https://www.rdocumentation.org/packages/units/versions/0.6-0/topics/set_units) function. This will add units as an attribute.
+
+
+
+
+```{r}
+
+concrete$Cement                    = set_units(x     = concrete$Cement, 
+                                               value = "kg m-3")
+concrete$Slag                      = set_units(x     = concrete$Slag, 
+                                               value = "kg m-3")
+concrete$Fly_Ash                   = set_units(x     = concrete$Fly_Ash, 
+                                               value = "kg m-3")
+concrete$Water                     = set_units(x     = concrete$Water, 
+                                               value = "kg m-3")
+concrete$Superplasticizer          = set_units(x     = concrete$Superplasticizer, 
+                                               value = "kg m-3")
+concrete$Coarse_Aggregates         = set_units(x     = concrete$Coarse_Aggregates, 
+                                               value = "kg m-3")
+concrete$Fine_Aggregates           = set_units(x     = concrete$Fine_Aggregates, 
+                                               value = "kg m-3")
+concrete$Slump                     = set_units(x     = concrete$Slump, 
+                                               value = "cm")
+concrete$Flow                      = set_units(x     = concrete$Flow, 
+                                               value = "cm")
+concrete$Compressive_Strength_28dy = set_units(x     = concrete$Compressive_Strength_28dy, 
+                                               value = "MPa")
+
+print(concrete)
+
+```
+
+If you click in the Global Environment Box, those units aren't arbitrary strings.  
+
+Better Still, the same command of set_units when applied to a variable that already has units will convert it.  This is nice when moving between SI units, USCS units.  If you are going to be cheeky and try the Furlong/Furkin/Fortnight system (FFF), alas that while the udunits2 package in R recognizes all three units, it recognizes firkins as a volume measure (which is really is) and not the mass measure based on density of water.
+
+Example here:
+
+```{r}
+
+  strength_in_psi = set_units(x     = concrete$Compressive_Strength_28dy, 
+                                               value = "psi")
+  print(concrete$Compressive_Strength_28dy[1])
+  print(strength_in_psi[1])
+  
+  # Ok now I'm being silly but so were the package developers.  Blame them.
+
+  cement_in_slug_per_cu3 = set_units(x    = concrete$Cement, 
+                                            value = "slugs/furlongs^3")
+  
+  print(concrete$Cement[1])
+  print(cement_in_slug_per_cu3[1])
+  
+  
+  # cleaning-up our horseplay..
+  
+  remove(strength_in_psi)
+  remove(cement_in_slug_per_cu3)
+  
+  
+```
+Caveat!  As useful as this can be, know this:  Not all R functions play nice with units or other "attributes" in data frames  Some of the plotting routunes and linear regression routiunes below will work with this.
+
+If you need your units and want to mimimize "messy" code in R when it conflicts any given function.  You can later strip out units by using the [as.numeric()](https://www.rdocumentation.org/packages/base/versions/3.5.1/topics/numeric) function
+
+or if you are working with a large frame and need to do them all at once, there is the "funcky" command set below.
+
+Here I am copying my "unit'ed" values to a new dataframe name and then stripping out the units below using the [lapply()](https://www.rdocumentation.org/packages/base/versions/3.5.1/topics/lapply) function
+
+
+```{r}
+
+# retaining a unit-friendly copy
+
+concrete_with_units = concrete 
+
+# stripping out units 
+
+concrete    = lapply(concrete_with_units, 
+                     function(x) 
+                              as.numeric(sub("\\s+\\D+$", "", x))
+                     )
 
 ```
 
 
-Import the data from the spreadsheet into a single data "frame" which works like a table or ledger of data.
+# 4. Some Basic Statistics and Traditional Single Variable Plots
 
-This command uses the "readWorksheetFromFile()" function which is loaded with the "XLConnect" package.
+Lets start with some basic statistics and plotting of them.
 
-(Also when I use functions in R, I tend to get very anal and try to comment the arguments as best as I can since I don't use R on a daily basis.)
+## 4.a. The "classic" stats
 
-In this case we are using a spreadsheet with multiple pages.  
+Let's get the mom-and-apple-pie stats for Concrete
+That second argument allows you to deal with missing data.
 
-Our concrete data is on the sheet called "Concrete."
+(for any people wanting to do Unit-Fu, note below that these functions will allow you to use units but not all will recognize them when done)
 
-We are pulling data in from a specific region of the sheet (including a header line) which goes from A2 to K105.
+```{r}
 
-![Screenshot of the Excel Sheet.](http://kyrill.ias.sdsmt.edu/cee_284/Concrete_Spreadsheet_Snapshot.png){ width=90% }
+  mean(x     = concrete_with_units$Cement, # variable to crunch
+       na.rm =                       TRUE) # ignore msissing data   
+  
+  sd(x     = concrete_with_units$Cement, # variable to crunch
+     na.rm =                       TRUE) # ignore msissing data  
+  
+  
+  skewness(x     = concrete_with_units$Cement, # variable to crunch
+           na.rm =                       TRUE) # ignore msissing data  
+  
+  kurtosis(x     = concrete_with_units$Cement, # variable to crunch
+           na.rm =                       TRUE) # ignore msissing data  
+
+     
+```
+
+Same for Water
+
+```{r}
+
+  mean(x     = concrete_with_units$Water,       # variable to crunch
+       na.rm =                      TRUE)       # ignore msissing data   
+  
+  sd(x     = concrete_with_units$Water,         # variable to crunch
+     na.rm =                      TRUE)         # ignore msissing data  
+  
+  
+  skewness(x     = concrete$Water,   # variable to crunch
+           na.rm =            TRUE)  # ignore msissing data  
+  
+  kurtosis(x     = concrete$Water,   # variable to crunch
+           na.rm =            TRUE)  # ignore msissing data  
  
+```
 
-Here we will grab data from the sheet and call the whole group of data (the data "frame") "exceldata" with the function [readWorksheetFromFile()](https://www.rdocumentation.org/packages/XLConnect/versions/0.2-14/topics/readWorksheetFromFile)
+Finally the basic stats for Compressive Strength
 
 ```{r}
 
-exceldata <- readWorksheetFromFile(file   = excel_file_name, # file name here
-                                   sheet  = "Concrete",      # select the Concrete Sheet
-                                   region = "A2:K105",       # chose the cells you need to import
-                                   header = TRUE             # TRUE if the first imported row is the Header
-                                   )
- 
-```
-
-Now with the data loaded let's take a look at the inventory of the data we just imported.
-
-
-```{r}
-
-str(object = exceldata)
-
-```
-
-In looking at this output, we see that the labels (or headers) are not the same as our spreadsheet. 
-
-Fix that we can fix that... with the [rename()](https://www.rdocumentation.org/packages/plyr/versions/1.8.4/topics/rename) function (which is in the plyr package)
-
-(And we can make a few more tweaks along the way)
-
-```{r}
-
-exceldata <- rename(x       = exceldata,             # data frame you want to patch
-                    replace = c("SP" =               # the name you want to change
-                                "Superplasticizer")  # the replacement name
-                    )
-
-exceldata <- rename(x       = exceldata,
-                    replace = c("Fine.Aggr." = 
-                                "Fine.Aggregates")
-                    )
-
-exceldata <- rename(x       = exceldata,
-                    replace = c("Coarse.Aggr." = 
-                                "Coarse.Aggregates")
-                    )
-
-exceldata <- rename(x       = exceldata,
-                    replace = c("SLUMP.cm." = 
-                                "SLUMP")
-                    )
-
-exceldata <- rename(x       = exceldata,
-                    replace = c("FLOW.cm." = 
-                                "FLOW")
-                    )
-
-exceldata <- rename(x       = exceldata,
-                    replace = c("Compressive.Strength..28.day...Mpa." = 
-                                "Compressive.Strength")
-                    )
+  mean(x     = concrete$Compressive_Strength_28dy, # variable to crunch
+       na.rm =                               TRUE) # ignore msissing data   
+  
+  sd(x     = concrete$Compressive_Strength_28dy, # variable to crunch
+     na.rm =                               TRUE) # ignore msissing data  
+  
+  
+  skewness(x     = concrete$Compressive_Strength_28dy, # variable to crunch
+           na.rm =                               TRUE) # ignore msissing data  
+  
+  kurtosis(x     = concrete$Compressive_Strength_28dy, # variable to crunch
+           na.rm =                               TRUE) # ignore msissing data  
+  
 
 ```
+## 4.b. The Historgrams, Boxplots, etc.
 
-OK now let's look at what we just fixed... 
- 
-```{r}
-                  
-exceldata
+R has a few ways to do the basic histograms, Boxplots and other distribution plots.
 
-```
+There are a number of spiffy ways to plot these statistical plots in R but these will give you "Maximum Satisfaction with Minimal Effort™️"
 
-(That's better!)
-
-Now onward!
-
-## Basic Statistics
-
-Let's start by doing some mom-and-apple pie basic statistics and related plots.
-
-Let's look at three variables, 
-
-* Cement Amount
-* Water Amount
-* Compressive Strength
-
-(I also like to arrange things in [data frames](https://www.rdocumentation.org/packages/base/versions/3.4.3/topics/data.frame) especially when working with R Markdown Documents)
-
-Remember that these represent our unskilled (or low-skilled) estimates of our parameters.
-
-```{r}
-
-Cement_Stats  = data.frame(n                 = length(  x = exceldata$Cement), # start by loading up the 
-                          mean               = mean(    x = exceldata$Cement), # data_frame with values
-                          standard_deviation = sd(      x = exceldata$Cement),
-                          variance           = var(     x = exceldata$Cement),
-                          skewness           = skewness(x = exceldata$Cement),
-                          kurtosis           = kurtosis(x = exceldata$Cement),
-                          row.names          = "Cement Amount") # row names make a label for the frame
-
-
-Water_Stats  = data.frame(n                  = length(  x = exceldata$Water),
-                          mean               = mean(    x = exceldata$Water), 
-                          standard_deviation = sd(      x = exceldata$Water),
-                          variance           = var(     x = exceldata$Water),
-                          skewness           = skewness(x = exceldata$Water),
-                          kurtosis           = kurtosis(x = exceldata$Water),
-                          row.names          = "Water Amount")
-
-Strength_Stats= data.frame(n                  = length(  x = exceldata$Compressive.Strength),
-                           mean               = mean(    x = exceldata$Compressive.Strength), 
-                           standard_deviation = sd(      x = exceldata$Compressive.Strength),
-                           variance           = var(     x = exceldata$Compressive.Strength),
-                           skewness           = skewness(x = exceldata$Compressive.Strength),
-                           kurtosis           = kurtosis(x = exceldata$Compressive.Strength),
-                           row.names          = "Compressive Strength")
-
-```
-
-Want 95& confidence intervals?  You know the formula... 
-
-$CI=t_{\alpha ,DF}\frac{s_{x}}{\sqrt{n}}$
-
-(Need to add a formula? Formulas in R-Markdown notebooks use the classic "hard-core" pre-MS Word era editor LaTex.  Don't want to learn LaTek?  No worries, neither do I.  [This webpage](https://www.codecogs.com/latex/eqneditor.php) will help you poke-and-click a formula and put it in "LaTekeese"  Just wrap the code between two $-signs)
-
-The t-statistic can be accessed with the function [qt()]("https://www.rdocumentation.org/packages/stats/versions/3.4.3/topics/TDist") (like Mathcad and MATLAB)
-
-```{r}
-
-confidence_level = 0.95
-alpha            = 1.00 - confidence_level
-
-# the old fashioned way... 
-
-Cement_Stats$confidence_limit.95  = qt(p  = 1-alpha/2 ,
-                                       df = Cement_Stats$n-1) * 
-                                    Cement_Stats$standard_deviation / 
-                                    sqrt(Cement_Stats$n)
-
-Water_Stats$confidence_limit.95   = qt(p  = 1-alpha/2 ,
-                                       df = Cement_Stats$n-1) * 
-                                    Water_Stats$standard_deviation / 
-                                    sqrt(Water_Stats$n)
-
-Strength_Stats$confidence_limit.95 = qt(p  = 1-alpha/2 ,
-                                        df = Strength_Stats$n-1) * 
-                                    Strength_Stats$standard_deviation / 
-                                    sqrt(Strength_Stats$n)
-
-print(Cement_Stats)
-
-print(Water_Stats)
-
-print(Strength_Stats)
-
-```
-
-## Visualizing our Data 
-
-We can also do some basic histogram and box whisker plots.
+I'll also stop using the units dataframe at this point since some of these functions (I'll tell you which ones as we get to them don't like having those units attributes)
 
 For a histogram, command is "[hist()](https://www.rdocumentation.org/packages/graphics/versions/3.4.3/topics/hist)"
 
@@ -259,14 +301,14 @@ For a histogram, command is "[hist()](https://www.rdocumentation.org/packages/gr
 
 # plotting histograms
 
-hist(x      = exceldata$Cement,                        # data to process
+hist(x      = concrete$Cement,                         # data to process
      breaks = 10,                                      # # of intervals
      main   = "Histogram for Cement Amount",           # main title string
      xlab   = expression('Cement Amount (kg m'^2*")"), # this lets us use superscripts/subscripts
      col    = "grey",                                  # color for shading
      border = "black")                                 # border for shading
 
-hist(x      = exceldata$Water,                        # data to process
+hist(x      = concrete$Water,                         # data to process
      breaks = 10,                                     # # of intervals
      main   = "Histogram for Water Amount",           # main title string
      xlab   = expression('Water Amount (kg m'^2*")"), # x axis label
@@ -274,7 +316,7 @@ hist(x      = exceldata$Water,                        # data to process
      border = "black")                                # border for shading
 
 
-hist(x      = exceldata$Compressive.Strength,         # data to process
+hist(x      = concrete$Compressive_Strength_28dy,     # data to process
      breaks = 10,                                     # # of intervals
      main   = "Histogram for Compressional Strength", # main title string
      xlab   = "Compressional Strength (MPa)",         # x axis label
@@ -283,123 +325,201 @@ hist(x      = exceldata$Compressive.Strength,         # data to process
 
 ```
 
+And here are box plots 
 
-For a box whisker, command is "[boxplot()](https://www.rdocumentation.org/packages/graphics/versions/3.4.3/topics/boxplot)"
+*(the R boxplot function doesn't play nice with units)*
 
 ```{r}
 
 # plotting box plots
  
-boxplot(x = exceldata$Cement,                           # data to process
+boxplot(x    = concrete$Cement,                         # data to process
         main = "Box Whisker Plot for Cement",           # main title string
         ylab = expression('Cement Amount (kg m'^2*")"), # y axis label
          col = "grey",                                  # color for shading
       border = "black")                                 # color for borders
 
 
-boxplot(   x = exceldata$Water,                         # data to process
+boxplot(   x =  concrete$Water ,                        # data to process
         main = "Box Whisker Plot for Water",            # main title string
         ylab = expression('Water Amount (kg m'^2*")"),  # y axis label
          col = "blue",                                  # color for shading
       border = "black")                                 # color for borders
 
 
-boxplot(   x = exceldata$Compressive.Strength,              # data to process
-        main = "Box Whisker Plot for Compressive Strength", # main title string
-        ylab = "Compressive Strength (MPa)",                # y axis label
-         col = "red",                                       # color for shading
-      border = "black")                                     # color for borders
+boxplot(   x = concrete$Compressive_Strength_28dy,             # data to process
+        main = "Box Whisker Plot for Compressive Strength",    # main title string
+        ylab = "Compressive Strength (MPa)",                   # y axis label
+         col = "red",                                          # color for shading
+      border = "black")                                        # color for borders
 
 
 
 ```
+
 
 With these we of course see a major limitation in box-whisker plots.  We don't, for example, see the bimodal nature of the Concrerte data.  It would be nice to see a variant of the box-wisker that gives is the "looking-down" on the histogram advangtate of the box whsiker with the ability to see "nuance" of various features of the histogram.
 
 Luckilly lots people have and a blessed few have invested the time to write code to mae this happen. There are two major kinds of "alterantive" plots out there.  The "Violin Plot" (not my favorite of the two) is one but I prefer the [beanplot()](https://www.rdocumentation.org/packages/beanplot/versions/1.2/topics/beanplot).
 
+*(likewise with boxplots, this one doesn't like units )*
 
 ```{r}
 
 # plotting box plots
  
-beanplot(  x = exceldata$Cement,                           # data to process
+beanplot(  x =  concrete$Cement,                        # data to process
         main = "Box Whisker Plot for Cement",           # main title string
         ylab = expression('Cement Amount (kg m'^2*")"), # y axis label
          col = "grey",                                  # color for shading
       border = "black")                                 # color for borders
 
 
-beanplot(  x = exceldata$Water,                         # data to process
+beanplot(  x = concrete$Water,                          # data to process
         main = "Box Whisker Plot for Water",            # main title string
         ylab = expression('Water Amount (kg m'^2*")"),  # y axis label
          col = "blue",                                  # color for shading
       border = "black")                                 # color for borders
 
 
-beanplot(  x = exceldata$Compressive.Strength,              # data to process
-        main = "Box Whisker Plot for Compressive Strength", # main title string
-        ylab = "Compressive Strength (MPa)",                # y axis label
-         col = "red",                                       # color for shading
-      border = "black")                                     # color for borders
+beanplot(  x =  concrete$Compressive_Strength_28dy ,           # data to process
+        main = "Box Whisker Plot for Compressive Strength",    # main title string
+        ylab = "Compressive Strength (MPa)",                   # y axis label
+         col = "red",                                          # color for shading
+      border = "black")                                        # color for borders
+
+
+```
+# 5.  Reorganizing Data for Plotting Multiple Fields
+
+If you review your data you will see of course that we have a number of properties making our concrete and all of them have the same units.  Arguablly we could merge them into a single set of box whisker plots.
+
+This requires a little more wrestling with your dataset.  In this case we are going to go from a traditional "table" format (your "concrete" dataframe) and turn it into a "long form" dataframe in which our materials are in a single column.  This will let us plot multiple box whisker or violin or bean plots along that x axis.
+
+Here we are using the "tidyverse" function called [gather()](https://www.rdocumentation.org/packages/tidyr/versions/0.8.1/topics/gather)
+
+We first want to just fetch just the independant variables used to make our concrete... 
+
+```{r}
+
+independant_variables = data.frame(`Test Number`       = concrete$`Test Number`, # the `X`'s will make the 
+                                   Cement              = concrete$Cement,        #  plots a little prettier
+                                   Slag                = concrete$Slag,          #  so we can use spaces in the 
+                                   Fly.Ash             = concrete$Fly_Ash,       #  names along the x-axis
+                                   Water               = concrete$Water,          
+                                   Superplasticizer    = concrete$Superplasticizer,
+                                   Coarse.Aggregates   = concrete$Coarse_Aggregates,
+                                   Fine.Aggregates     = concrete$Fine_Aggregates)
+                                   
+               
+independant_variables = gather(data   = independant_variables, # data frames
+                               key    = "Materials",           # what you will name the aggregated column headers
+                               value  = "Material.Amounts",    # what you will name the aggregated column values
+                               "Cement",                       # and just the list of all the aggregated column names
+                               "Slag",
+                               "Fly.Ash",
+                               "Water",
+                               "Superplasticizer",
+                               "Coarse.Aggregates",
+                               "Fine.Aggregates")
+
+# and now we can plot all of the values at once.
+
+boxplot(formula = Material.Amounts ~ Materials,             # plotted value by (~) secondary parameter
+        data    = independant_variables,          # dataframe
+        main    = "Box Whisker Plot for Cement",  # main title string
+        ylab    = expression('Material Amounts (kg m'^2*")"), # y axis label
+        col     = "grey",                          # color for shading
+        border  = "black")
+
+# expression('Material Amounts (kg m'^2*")"
+beanplot(formula = Material.Amounts~Materials,     # plotted value by (~) secondary parameter
+         data    = independant_variables,          # dataframe
+         names   = c("Cement",                     # custom labels (\n makes a new line)
+                     "Slag",
+                     "Fly\nAsh",
+                     "Water",
+                     "Super-\nplas.",
+                     "Coarse\nAggs",
+                     "Fine\nAggs"),
+         main    = "Box Whisker Plot for Cement",  # main title string
+         ylab    = "Material Amounts (kg m²)",     # y axis label
+         col     = c("cyan",     # fill colour
+                     "darkblue", # sample lines
+                     "darkblue", # outlier lines
+                     "darkblue") # average/median line
+         )
+
 
 
 ```
 
+# 6. Correlation of Variables
 
-So basically the bean plot resembles a hand-drawn distribution but reflected around an axis (and as you saw in our class powerpoints, both halves can represent two different datasets.)
-
-
-## Correlating and then Fitting Cement to Compressive Strength
+## 6a. Correlating and then Fitting Cement to Compressive Strength
 
 Let's start by doing a "simple"" plot .  In this case since I already know the answer because the spreadsheet also has a table of how well our independent variables correlate against the dependent variables (e.g., Slump, Flow, or in our case Strength).  The Cement correlates the best against Compressive Strength (OK, truth be told, it correlates the least badly).
 
 We can acutally do this with a correlate function, [cor()](https://www.rdocumentation.org/packages/stats/versions/3.4.3/topics/cor)...
 
-To grab a value in the table "exceldata" we call the data frame (exceldata) and the variable name (Cement or Water vs Compressive.Strength), separating the frame and variable names by a $ sign.
+To grab a value in the table "concrete" we call the data frame (concrete) and the variable name (Cement or Water vs Compressive_Strength_28dy), separating the frame and variable names by a $ sign.
 
 
 ```{r}
 
 print("Cement vs Compressive Strength Correlation, r")
 
-cor(x = exceldata$Cement,               # the x-value 
-    y = exceldata$Compressive.Strength, # the y-value
-    method = "pearson"                  # method of correlation
+cor(x = concrete$Cement,                    # the x-value 
+    y = concrete$Compressive_Strength_28dy, # the y-value
+    method = "pearson"                      # method of correlation
     )
 
 ```
 
-or if you like to do everything at once...  (Not always the best thing to do)
+or if you like to do everything at once...  (Not always the best thing to do this)
+
+This is just doing the correlation of the "y" variable (Strength) against each individual variable.
+
+Multivariate correlation comes below... 
 
 ```{r}
 
 print("Correlation (r) of all variables against Compressive Strength")
 
-cor(x = exceldata,                      # this time X is the whole data frame... 
-    y = exceldata$Compressive.Strength, # the y-value 
-    use = "everything",                 # correlate evything
+cor(x = concrete$Cement,                    # this time X is the whole data frame... 
+    y = concrete$Compressive_Strength_28dy, # the y-value 
+    use = "everything",                     # correlate evything
     method = "pearson"
     )
 
 ```
 
-
-
-Now to plot the Cement vs Strength as a simople x-y scatter plot.
-
+Now let's plot the Cement amount against Compressive Strength
 
 ```{r}
 # Now we can plot 
 
-plot(x    = exceldata$Cement,                          # x-values (the $ lets us reach into
-     y    = exceldata$Compressive.Strength,            # y-values     the data frame) 
+plot(x    = concrete$Cement,                          # x-values (the $ lets us reach into
+     y    = concrete$Compressive_Strength_28dy,        # y-values     the data frame) 
      main = "Example of a Single Variable Regression", # main title string
      xlab = expression('Cement Amount (kg m'^2*")"),   # x-labels
      ylab = "28-dy Compressive Strength (MPa)"         # y-labels
      )
 
 ```
+
+Love overkill without any distinct numerical score and look at how everything in your dataset correlates with every other variables... 
+
+try [pairs()](https://www.rdocumentation.org/packages/graphics/versions/3.5.1/topics/pairs)
+
+```{r}
+
+pairs(x   = concrete, # do everything in the dataframe
+      pch = ".")      # plot dots (the default is circles)
+
+```
+
+(Obviously the more variables in your dataframe the messier it gets!)
 
 ### Creating our linear model and "calibrating" it
 
@@ -426,11 +546,12 @@ If this were a $\hat{y}(x)={\alpha_0}+{\alpha_0}\ x^2$, then the prototype for t
 
 This will hopefully make more sense as we continue!
 
+*(lm and similar linear regression functions don't play well with units.)*
 
 ```{r}
 
-linear_model.S_v_c =  lm(formula = Compressive.Strength ~ Cement, # your formula y ~ x
-                         data    = exceldata)                     # the data frame
+linear_model.S_v_c =  lm(formula = Compressive_Strength_28dy ~ Cement, # your formula y ~ x
+                         data    = concrete)                           # the data frame
 ```
 
 Let's see what we have...  This summary command will provide the details of the lm() function's important results
@@ -443,7 +564,7 @@ We'll talk about a few of the other features when we do the larger multivariate 
 
 ```{r}
 
-summary(object = linear_model.S_v_c)
+ summary(object = linear_model.S_v_c)
 
 ```
 
@@ -484,6 +605,7 @@ The resulting array, conf, will have three columns:  the original linear regress
 
 ```{r}
 
+# this will make a pretty print of our output here.
 data.frame(conf.S_v_c)
 
 ```
@@ -503,8 +625,8 @@ and finally our lower than upper confidence limits...
 
 # Now we can plot 
 
-plot(x    = exceldata$Cement,                          # x-values (the $ lets us reach into
-     y    = exceldata$Compressive.Strength,            # y-values     the data frame) 
+plot(x    = concrete$Cement,                          # x-values (the $ lets us reach into
+     y    = concrete$Compressive_Strength_28dy,            # y-values     the data frame) 
      main = "Example of a Single Variable Regression", # main title string
      xlab = "Cement (kg m-3 concrete)",                # x-labels
      ylab = "28-dy Compressive Stren. (MPa)"           # y-labels
@@ -532,6 +654,8 @@ lines(x   = newx,           # the x data
 
 Looks pretty good!  (well the graph does.. not necessarily the quality of the regression)
 
+(FYI, Tidyverse's toolkit can do this with less effort.  If you want to go hardcore with R it may be a good idea to look at the version of this Notebook adapted for the tidyverse.)
+
 And now we're going to do something about that!
 
 We're now going to use not just one independent variable... but all 7 of them!
@@ -540,14 +664,14 @@ The good news is that it follows the same form as the simple linear regression. 
 
 ```{r}
 
-linear_model.S_v_all <- lm(data    = exceldata,                       # your data frame
-                           formula = Compressive.Strength ~ Cement +  # your formula
-                                                            Slag +
-                                                            Fly.ash +
-                                                            Water +
-                                                            Superplasticizer +
-                                                            Fine.Aggregates +
-                                                            Coarse.Aggregates
+linear_model.S_v_all <- lm(data    = concrete,                              # your data frame
+                           formula = Compressive_Strength_28dy ~ Cement +  # your formula
+                                                                 Slag +
+                                                                 Fly_Ash +
+                                                                 Water +
+                                                                 Superplasticizer +
+                                                                 Fine_Aggregates +
+                                                                 Coarse_Aggregates
                            )  
 
 ```
@@ -594,7 +718,7 @@ Here we will just regress y(x1,x2...) against y.
 
 ```{r}
 
-linear_model.S_v_Sofall <- lm(formula = fitted.S_v_all ~ exceldata$Compressive.Strength)  
+linear_model.S_v_Sofall <- lm(formula = fitted.S_v_all ~ concrete$Compressive_Strength_28dy)  
 
 summary(object = linear_model.S_v_Sofall)
 
@@ -616,17 +740,21 @@ par(pty = "s") # this makes the plot square
 # now a simple x-y scatterplot as before but with both axes having
 #   the same range...
 
-plot(x    = exceldata$Compressive.Strength,                        # x-values
-     y    = fitted.S_v_all,                                        # y-values
-     main = "Example of a Multiple Variable Regression",           # title string
-     xlab = "Obs 28-dy Compressive Stren. (MPa)",                  # x-label
-     ylab = "Pred 28-dy Compressive Stren. (MPa)",                 # y-label
-     xlim = c(min(exceldata$Compressive.Strength,fitted.S_v_all),  # x-axis range
-              max(exceldata$Compressive.Strength,fitted.S_v_all)),
-     ylim = c(min(exceldata$Compressive.Strength,fitted.S_v_all),  # y-axis range
-              max(exceldata$Compressive.Strength,fitted.S_v_all)),  
-     asp = 1                                                       # aspect ratio between
-     )                                                             #    x and y scales
+plot(x    = concrete$Compressive_Strength_28dy,          # x-values
+     y    = fitted.S_v_all,                              # y-values
+     main = "Example of a Multiple Variable Regression", # title string
+     xlab = "Obs 28-dy Compressive Stren. (MPa)",        # x-label
+     ylab = "Pred 28-dy Compressive Stren. (MPa)",       # y-label
+     xlim = c(min(concrete$Compressive_Strength_28dy,    # limits on the axes
+                  fitted.S_v_all),  # x-axis range
+              max(concrete$Compressive_Strength_28dy,
+                  fitted.S_v_all)),
+     ylim = c(min(concrete$Compressive_Strength_28dy,
+                  fitted.S_v_all),  # y-axis range
+              max(concrete$Compressive_Strength_28dy,
+                  fitted.S_v_all)),  
+     asp = 1                                             # aspect ratio between
+     )                                                
 
 # plot the linear regression line
 
@@ -650,8 +778,11 @@ While here, we can do some general error metrics that may be useful..
 
 First, the Bias... (if we are too high or too low)
 
+$BIAS =  \frac{1}{N}  \sum_{i=1}^{n} (est_i-true_i) = \overline{(est-true)}$
+
 ```{r}
-bias = mean(fitted.S_v_all - exceldata$Compressive.Strength)
+
+bias = mean(fitted.S_v_all - concrete$Compressive_Strength_28dy)
 
 print("BIAS")
 print(bias)
@@ -659,8 +790,9 @@ print(bias)
 
 The root mean squared error (RMSE) thought he standard error of the estmate is technically the one we use here.  RMSE remains a common error metric though... 
 
+$RMSE = \sqrt{ \frac{1}{N}  \sum_{i=1}^{n} (est_i-true_i)^2 } = \sqrt{\overline{(est-true)^2}}$
 ```{r}
-rmse = sqrt(mean( (fitted.S_v_all - exceldata$Compressive.Strength)^2)  )
+rmse = sqrt(mean( (fitted.S_v_all - concrete$Compressive_Strength_28dy)^2)  )
 
 print("RMSE")
 print(rmse)
@@ -671,17 +803,18 @@ And finally our correlation coefficient (which is basically our coefficient of d
 
 ```{r}
 
-r = cor(x = fitted.S_v_all,                 # the x-value 
-        y = exceldata$Compressive.Strength, # the y-value
-        method = "pearson"                  # method of correlation
+r = cor(x = fitted.S_v_all,                     # the x-value 
+        y = concrete$Compressive_Strength_28dy, # the y-value
+        method = "pearson"                      # method of correlation
         )
 
 print("correlation coefficient")
 print(r)
+
 print("coefficient of determination")
 print(r^2)
 
 ```
 
-And with that, we're done.
+And with that, we're done... 
 
