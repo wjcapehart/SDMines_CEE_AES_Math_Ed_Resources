@@ -316,7 +316,10 @@ Now I'm going to do this one tiny step at a time until we get to a viable produc
 
 Graphing is invoked by the [ggplot2](https://ggplot2.tidyverse.org) command.. which has a heluvalot under its hood!  For me all that detail was what had me a little shy to adopt this way of printing data.
 
-Tidyverse uses what is sometimes called the "grammar of graphics" method
+Tidyverse uses what is sometimes called the ["grammar of graphics"](https://ramnathv.github.io/pycon2014-r/visualize/ggplot2.html) method... to make a long story longer, the GoG presents separate commands to do separate things rather bundle stuff in a single graphing function.  Sometimes it makes a lot of sense... other times it may be confusuion.  (Hence me demonstrating making a graph this one tiny step at a time!
+
+
+First thing we are going to do is open a plotting space with the command [ggplot()](https://ggplot2.tidyverse.org/reference/ggplot.html)
 
 ```{r}
 
@@ -326,13 +329,13 @@ ggplot()
 
 ```
 
-Wow.  We have a big square of grey.  All it's doing is setting up our plot environment... so let's do some more...
+Wow.  We have a... big square of grey.  All it's doing is setting up our plot environment... so let's do some more...
 
 If we want to do a histogram we are going to have to tell it what we want to print and where to get the stuff
 
-This involves a crypitc function called "[aes](https://ggplot2.tidyverse.org/reference/aes.html)" (short for aesthetics)
+This involves a "mapping" function called "[aes](https://ggplot2.tidyverse.org/reference/aes.html)" (short for aesthetics)
 
-here, we are working with the data frame " concrete" and are working on the variable Cement which we are tossing onto the x axis because that's where the bins of cement go!
+here, we are working with the data frame "concrete" and are working on the variable Cement which we are tossing onto the x axis because that's where the bins of cement go!
 
 ```{r}
 
@@ -391,7 +394,7 @@ ggplot(data = concrete) +     # invoke graphics environment using a given datafr
   
   xlim( 100, 400 ) +          # NEW: adding x-axis limits
 
-  geom_histogram()           # insert histogram
+  geom_histogram()            # insert histogram
 
 ```
 
@@ -453,7 +456,7 @@ ggplot(data = concrete) +     # invoke graphics environment using a given datafr
 
   ggtitle("Yeh Superplasticizer Tests") + #Custom Title
   
-  xlab("Water Amount (kg m³)") + # NEW : Custom Axis Label note use of superscripts from above
+  xlab("Water Amount (kg m)") + # NEW : Custom Axis Label note use of superscripts from above
 
   geom_histogram(fill="blue") # insert histogram (with a single chosen color)
 
@@ -473,16 +476,79 @@ ggplot(data = concrete) +     # invoke graphics environment using a given datafr
 
   ggtitle("Yeh Superplasticizer Tests") + #Custom Title
   
-  xlab("28-dy Compressive Strength (MPa)") + # NEW : Custom Axis Label note use of superscripts from above
+  xlab("28-dy Compressive Strength (MPa)") + # NEW : Custom Axis Label
 
   geom_histogram(fill="red") # insert histogram (with a single chosen color)
 
 ```
 
 
-Also remember 
+There are some other plots that we can use to describe our data.
+
+Here to play with them we will take a quick step back and address that "tidy"'ed (should that say "tidied"?) dataframe "concrete_tidy"
 
 
+```{r}
+
+ggplot(data = concrete_tidy) +            # invoke graphics environment using a given dataframe
+  
+  theme_bw() +                            # changing the plotting theme
+  
+  aes(x      = Value,                     # map x-axis value
+      color  = Parameter) +               # map colors for different quality
+  
+  ggtitle("Yeh Superplasticizer Tests") + # Custom Title
+  
+  xlab("Value") +                         #  Custom Axis Label
+
+  geom_density()                          # insert crete a relative density plot 
+
+```
+OK too messy.  How about leveraging a box whisker?
+
+
+```{r}
+
+ggplot(data = concrete_tidy) +            # invoke graphics environment using a given dataframe
+  
+  theme_bw( ) +                            # changing the plotting theme
+  
+  theme(axis.text.x = element_blank()) +    # adding an extra trait to the x-axis
+  
+  aes(y      = Value,                     # map y-axis value
+      x      = Parameter,
+      color  = Parameter) +               # map colors for different quality
+  
+  ggtitle("Yeh Superplasticizer Tests") + # Custom Title
+  
+  ylab("Value") +                         #  Custom Axis Label
+
+  geom_boxplot()                          # insert crete a relative density plot 
+
+```
+
+ How about leveraging a "violin" plot?
+
+
+```{r}
+
+ggplot(data = concrete_tidy) +            # invoke graphics environment using a given dataframe
+  
+  theme_bw( ) +                            # changing the plotting theme
+  
+  theme(axis.text.x = element_blank()) +    # adding an extra trait to the x-axis
+  
+  aes(y      = Value,                     # map y-axis value
+      x      = Parameter,
+      color  = Parameter) +               # map colors for different quality
+  
+  ggtitle("Yeh Superplasticizer Tests") + # Custom Title
+  
+  ylab("Value") +                         #  Custom Axis Label
+
+  geom_violin()                          # insert crete a relative density plot 
+
+```
 
 # 5. Correlation of Variables
 
@@ -995,7 +1061,9 @@ ggplot(data = concrete) +     # invoke graphics environment using a given datafr
 
   ggtitle("Yeh Superplasticine Tests") +            # NEW : Custom Title
   
-  xlab(expression("Cement Amount (kg m" ^3* ")")) + # NEW : Custom Axis Label note use of superscripts from above
+  xlab(expression(  
+         "Material Amount (kg m" ^-3* ")")
+       ) + # NEW : Custom Axis Label note use of superscripts from above
 
   geom_histogram(fill="gray") # insert histogram (with a single chosen color)
 
@@ -1022,7 +1090,7 @@ ggplot(data = concrete) +     # invoke graphics environment using a given datafr
 
   ggtitle("Yeh Superplasticine Tests") +            # : Custom Title
   
-  ylab(expression("Cement Amount (kg m" ^3* ")")) + # Edit : Custom Axis Label note use of superscripts from above
+  ylab(expression("Cement Amount (kg m" ^-3* ")")) + # Edit : Custom Axis Label note use of superscripts from above
 
   geom_boxplot(fill="gray") # SWAP : doing a boxplot... 
 
@@ -1099,7 +1167,7 @@ ggplot(data = concrete_melt_independant_vars) +     # invoke graphics environmen
 
   ggtitle("Yeh Superplasticine Tests") +            # : Custom Title
   
-  ylab(expression("Material Amount (kg m" ^3* ")")) + # Edit : Custom Axis Label note use of superscripts from above
+  ylab(expression("Material Amount (kg m" ^-3* ")")) + # Edit : Custom Axis Label note use of superscripts from above
   xlab("Material") + # Edit : Custom Axis Label note use of superscripts from above
 
   geom_boxplot() # SWAP : doing a boxplot... 
@@ -1122,7 +1190,7 @@ ggplot(data = concrete_melt_dependant_vars) +     # invoke graphics environment 
 
   ggtitle("Yeh Superplasticine Tests") +            # : Custom Title
   
-  ylab(expression("Material Amount (kg m" ^3* ")")) + # Edit : Custom Axis Label note use of superscripts from above
+  ylab(expression("Property Amount") + # Edit : Custom Axis Label note use of superscripts from above
   xlab("Material") + # Edit : Custom Axis Label note use of superscripts from above
 
   geom_boxplot() # SWAP : doing a boxplot... 
