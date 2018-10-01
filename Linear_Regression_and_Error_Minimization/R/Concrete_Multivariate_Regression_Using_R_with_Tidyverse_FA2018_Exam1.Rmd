@@ -1102,6 +1102,325 @@ ggplot(data = concrete_dependant) +            # invoke graphics environment usi
 ```
 
 
+```{r}
+
+
+# Making a simple X-Y scatterplot and adding a regression to it
+
+maxp = max(fitted.S_v_all$Compressive_Strength_28dy,fitted.S_v_all$Compressive_Strength_28dy_hat)
+minp = min(fitted.S_v_all$Compressive_Strength_28dy,fitted.S_v_all$Compressive_Strength_28dy_hat)
+
+ggplot(data = fitted.S_v_all) +           # invoke graphics environment using a given dataframe
+  
+  theme_bw( ) +                           # changing the plotting theme
+  
+  aes(x      = Compressive_Strength_28dy,    # x-value
+      y      = Compressive_Strength_28dy_hat) +  # y-value
+
+  ggtitle("Yeh Superplasticizer Tests",
+          subtitle = "28-dy Compressive Strength (MPa)") +    # EDITED: Custom Title now with a subtitle
+  
+  ylab("Modelled")     + # y-label
+  xlab("Observed")     + # x-label
+
+  geom_point(colour="darkred") +  # plot points
+  
+  geom_smooth(method  = "lm",      # use a simple linar model
+              formula = y ~ x,     # lm-style formula
+              se      = FALSE,      # display Confidence Intervals
+              level   = 0.95,      # Confidene Level to Map Out
+              colour  = "red",     # regression line color
+              fill    = "magenta", # fill for confidence limits
+              size    = 0.5)  +    # line thickness
+  
+  geom_abline(slope     = 1,       # NEW: add a very simple line
+              intercept = 0,       #  (for a 1:1 reference)
+              color     = "grey",
+              linetype  = "dashed") +
+  
+  xlim(minp,maxp) + 
+  ylim(minp,maxp) + 
+
+
+  coord_fixed(ratio = 1)           # NEW: make the aspect ratio 
+                                   #   (fix the results)
+```
+
+```{r}
+
+
+# Making a simple X-Y scatterplot and adding a regression to it
+
+maxp = max(fitted.S_v_all$Compressive_Strength_28dy,fitted.S_v_all$Compressive_Strength_28dy_hat)
+minp = min(fitted.S_v_all$Compressive_Strength_28dy,fitted.S_v_all$Compressive_Strength_28dy_hat)
+
+ggplot(data = fitted.S_v_all) +           # invoke graphics environment using a given dataframe
+  
+  theme_bw( ) +                           # changing the plotting theme
+  
+  aes(x      = Compressive_Strength_28dy,    # x-value
+      y      = Compressive_Strength_28dy_hat) +  # y-value
+
+  ggtitle("Yeh Superplasticizer Tests",
+          subtitle = "28-dy Compressive Strength (MPa)") +    # EDITED: Custom Title now with a subtitle
+  
+  ylab("Modelled")     + # y-label
+  xlab("Observed")     + # x-label
+
+  geom_point(colour="darkred") +  # plot points
+  
+  geom_smooth(method  = "lm",      # use a simple linar model
+              formula = y ~ x,     # lm-style formula
+              se      = FALSE,      # display Confidence Intervals
+              level   = 0.95,      # Confidene Level to Map Out
+              colour  = "red",     # regression line color
+              fill    = "magenta", # fill for confidence limits
+              size    = 0.5)  +    # line thickness
+  
+  geom_abline(slope     = 1,       # NEW: add a very simple line
+              intercept = 0,       #  (for a 1:1 reference)
+              color     = "grey",
+              linetype  = "dashed") +
+  
+  xlim(minp,maxp) + 
+  ylim(minp,maxp) + 
+
+
+  coord_fixed(ratio = 1)           # NEW: make the aspect ratio 
+                                   #   (fix the results)
+```
+
+```{r}
+
+
+fitted.S_v_all2 = fitted.S_v_all
+
+fitted.S_v_all2$Compressive_Strength_28dy_hat = fitted.S_v_all2$Compressive_Strength_28dy_hat + 5
+
+
+maxp = max(fitted.S_v_all2$Compressive_Strength_28dy,fitted.S_v_all2$Compressive_Strength_28dy_hat)
+minp = min(fitted.S_v_all2$Compressive_Strength_28dy,fitted.S_v_all2$Compressive_Strength_28dy_hat)
+
+# Making a simple X-Y scatterplot and adding a regression to it
+
+ggplot(data = fitted.S_v_all2) +           # invoke graphics environment using a given dataframe
+  
+  theme_bw( ) +                           # changing the plotting theme
+  
+  aes(x      = Compressive_Strength_28dy,    # x-value
+      y      = Compressive_Strength_28dy_hat) +  # y-value
+
+  ggtitle("Yeh Superplasticizer Tests",
+          subtitle = "28-dy Compressive Strength (MPa)") +    # EDITED: Custom Title now with a subtitle
+  
+  ylab("Modelled")     + # y-label
+  xlab("Observed")     + # x-label
+
+  geom_point(colour="darkblue") +  # plot points
+  
+  geom_smooth(method  = "lm",      # use a simple linar model
+              formula = y ~ x,     # lm-style formula
+              se      = FALSE,      # display Confidence Intervals
+              level   = 0.95,      # Confidene Level to Map Out
+              colour  = "blue",     # regression line color
+              fill    = "cyan", # fill for confidence limits
+              size    = 0.5)  +    # line thickness
+  
+  geom_abline(slope     = 1,       # NEW: add a very simple line
+              intercept = 0,       #  (for a 1:1 reference)
+              color     = "grey",
+              linetype  = "dashed") +
+  xlim(minp,maxp) + 
+  ylim(minp,maxp) + 
+
+  coord_fixed(ratio = 1)         # NEW: make the aspect ratio 
+                                   #   (fix the results)
+
+```
+
+
+
+```{r}
+linear_model.S_v_cwf  <- lm(data    = concrete,                             # your data frame
+                            formula = Compressive_Strength_28dy ~ Cement +  # your formula
+                                                    Fly_Ash+        Water)  
+
+
+fitted.S_v_cwf = get_regression_points(model = linear_model.S_v_cwf)
+
+
+fitted.S_v_cwf2 = fitted.S_v_cwf
+
+fitted.S_v_cwf2$Compressive_Strength_28dy_hat = fitted.S_v_cwf2$Compressive_Strength_28dy_hat + 10
+
+
+linear_model.S_v_cw  <- lm(data    = concrete,                             # your data frame
+                            formula = Compressive_Strength_28dy ~ Cement +  # your formula
+                                                        Water)  
+
+
+fitted.S_v_cw = get_regression_points(model = linear_model.S_v_cw)
+
+
+fitted.S_v_cw2 = fitted.S_v_cw
+
+fitted.S_v_cw2$Compressive_Strength_28dy_hat = fitted.S_v_cw2$Compressive_Strength_28dy_hat + 10
+
+
+
+
+maxp = max(fitted.S_v_cwf$Compressive_Strength_28dy,fitted.S_v_cwf$Compressive_Strength_28dy_hat)
+minp = min(fitted.S_v_cwf$Compressive_Strength_28dy,fitted.S_v_cwf$Compressive_Strength_28dy_hat)
+
+# Making a simple X-Y scatterplot and adding a regression to it
+
+ggplot(data = fitted.S_v_cwf) +           # invoke graphics environment using a given dataframe
+  
+  theme_bw( ) +                           # changing the plotting theme
+  
+  aes(x      = Compressive_Strength_28dy,    # x-value
+      y      = Compressive_Strength_28dy_hat) +  # y-value
+
+  ggtitle("Yeh Superplasticizer Tests",
+          subtitle = "28-dy Compressive Strength (MPa)") +    # EDITED: Custom Title now with a subtitle
+  
+  ylab("Modelled")     + # y-label
+  xlab("Observed")     + # x-label
+
+  geom_point(colour="darkgreen") +  # plot points
+  
+  geom_smooth(method  = "lm",      # use a simple linar model
+              formula = y ~ x,     # lm-style formula
+              se      = FALSE,      # display Confidence Intervals
+              level   = 0.95,      # Confidene Level to Map Out
+              colour  = "green",     # regression line color
+              fill    = "cyan", # fill for confidence limits
+              size    = 0.5)  +    # line thickness
+  
+  geom_abline(slope     = 1,       # NEW: add a very simple line
+              intercept = 0,       #  (for a 1:1 reference)
+              color     = "grey",
+              linetype  = "dashed") +
+  xlim(minp,maxp) + 
+  ylim(minp,maxp) + 
+
+  coord_fixed(ratio = 1)         # NEW: make the aspect ratio 
+                                   #   (fix the results)
+
+```
+
+
+```{r}
+
+model_frames = data.frame( Observed = fitted.S_v_cwf$Compressive_Strength_28dy,
+                           A  = fitted.S_v_cwf2$Compressive_Strength_28dy_hat,
+                           B  = fitted.S_v_all$Compressive_Strength_28dy_hat,
+                           C  = fitted.S_v_cw$Compressive_Strength_28dy_hat,
+                           D  = fitted.S_v_cwf$Compressive_Strength_28dy_hat-2)
+
+
+
+
+model_gather = gather(data  =    model_frames, # your data frame
+                         key   = "Model", # column name for your former columns
+                         value = "Modeled", # column name for your data
+                         A, B, C, D ) # the list for the columns to "gather"
+
+
+maxp = max(model_gather$Observed,model_gather$Modeled)
+minp = min(model_gather$Observed,model_gather$Modeled)
+
+
+ggplot(data = model_gather,
+       mapping =   aes(x      = Observed,    # x-value
+      y      = Modeled,
+      color  = Model)) +  # y-value) +           # invoke graphics environment using a given dataframe
+  
+  theme_bw( ) +                           # changing the plotting theme
+   ggtitle("Yeh Superplasticizer Tests",
+          subtitle = "28-dy Compressive Strength (MPa)") +    # EDITED: Custom Title now with a subtitle
+
+
+  
+  geom_abline(slope     = 1,       # NEW: add a very simple line
+              intercept = 0,       #  (for a 1:1 reference)
+              color     = "grey",
+              linetype  = "dashed")  +
+  
+
+   geom_point(size=1)+  facet_grid(cols=vars(Model))+
+    xlim(minp,maxp) + 
+  ylim(minp,maxp) + 
+    coord_fixed(ratio = 1)  
+```
+
+```{r}
+
+strength =  data.frame(Modeled = fitted.S_v_all$Compressive_Strength_28dy,
+                       Model="Observed")
+
+ggplot(data = model_gather) + 
+       aes(x      = Modeled,
+                       color  = Model) +  
+  
+  theme_bw( ) +            
+  
+   ggtitle("Yeh Superplasticizer Tests",
+          subtitle = "Model Probability Distributions") +   
+
+  
+
+     xlab("28-dy Compressive Strength at Failure (MPa)")+
+
+     ylab("probability desity function, p(strength)")+
+  
+
+  scale_x_continuous(breaks       = seq(0, 80, by = 5),
+                     minor_breaks = seq(-5, 80, 1),limits = c(0,75))+
+geom_vline(xintercept = 17,  color= "darkgrey")+
+geom_vline(xintercept = 28,  color= "darkgrey")+
+geom_vline(xintercept = 70,  color= "darkgrey")+
+  geom_vline(xintercept = 45,  color= "darkgrey")+
+
+   geom_density() +
+ geom_density(data = strength,color="black")
+
+  
+```
+
+```{r}
+
+strength =  data.frame(Modeled = fitted.S_v_all$Compressive_Strength_28dy,
+                       Model="Observed")
+
+ggplot(data = model_gather) + 
+       aes(x      = Modeled,
+                       color  = Model) +  
+  
+  theme_bw( ) +            
+  
+   ggtitle("Yeh Superplasticizer Tests",
+          subtitle = "Model Probability Distributions") +   
+
+  
+
+     xlab("28-dy Compressive Strength at Failure (MPa)")+
+
+     ylab("probability desity function, p(strength)")+
+  
+
+  scale_x_continuous(breaks       = seq(0, 80, by = 5),
+                     minor_breaks = seq(-5, 80, 1),limits = c(0,75))+
+geom_vline(xintercept = 17,  color= "darkgrey")+
+geom_vline(xintercept = 28,  color= "darkgrey")+
+geom_vline(xintercept = 70,  color= "darkgrey")+
+  geom_vline(xintercept = 45,  color= "darkgrey")+
+
+   stat_ecdf(geom = "step") +
+ stat_ecdf(data = strength,color="black",geom = "step")
+
+  
+```
 
 
 
