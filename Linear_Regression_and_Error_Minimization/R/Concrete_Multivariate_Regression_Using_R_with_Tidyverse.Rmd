@@ -8,7 +8,7 @@ output:
 
 This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
 
-These notebooks are ypically this is designed to create a pleasing viewing environment of data analysis that allows you to include figures, text, links, etc. so that your work is better understood and can be reproduced and used with confidence.
+These notebooks are typically this is designed to create a pleasing viewing environment of data analysis that allows you to include figures, text, links, etc. so that your work is better understood and can be reproduced and used with confidence.
 
 The source code for this R notebook (Rmd suffixed files), when stored as web pages (html files), can be downloaded by clicking the button at the top of the page.
 
@@ -587,6 +587,30 @@ ggplot(data = concrete) +     # invoke graphics environment using a given datafr
   geom_histogram(fill="red") # insert histogram (with a single chosen color)
 
 ```
+
+(And from our Intro to Stats Lecture...)
+
+
+```{r}
+
+# Histogram of Strength
+
+ggplot(data = concrete) +     # invoke graphics environment using a given dataframe
+  
+  theme_bw() +                # changing the plotting theme
+  
+  aes(x = Slump) + # select variable to print... You can get really fancy here later
+  
+  xlim( 0, 30 ) +          # adding x-axis limits
+
+  ggtitle("Yeh Superplasticizer Tests") + #Custom Title
+  
+  xlab("Slump (cm)") + # NEW : Custom Axis Label
+
+  geom_histogram(fill="darkgreen") # insert histogram (with a single chosen color)
+
+```
+
 ## 5.2 Distribution Plot [not so good an] Example
 
 There are some other plots that we can use to describe our data.
@@ -916,6 +940,8 @@ pairs(x   = concrete, # do everything in the dataframe
 
 (Obviously the more variables in your dataframe the messier it gets!)
 
+
+
 ## 6.3. Creating our linear model and "calibrating" it
 
 We weren't all that thrilled with the correlation between these components and strength but let's go ahead and demonstrate a regression.
@@ -1165,7 +1191,7 @@ And to close things off, we can do some general error metrics that may be useful
 
 First, the Mean Squared Error (MSE) or Bias... (if we are too high or too low)
 
-$BIAS = MSE = \frac{1}{N}  \sum_{i=1}^{n} (\widehat{y}(\overrightarrow{x_i})-y_i)  =    \overline{(\widehat{y}(\overrightarrow{x_i})-y_i)}$
+$BIAS = MSE = \frac{1}{N}  \sum_{i=1}^{n} [\widehat{y}(\overrightarrow{x_i})-y_i]  =    \overline{[\widehat{y}(\overrightarrow{x_i})-y_i]}$
 
 ```{r}
   # Calculate Bias (MSE)
@@ -1179,9 +1205,9 @@ For a linear or multivariate regression the average of our residuals (the differ
 
 The root mean squared error (RMSE) is shown here.  It shouldn't be zero since the residuals are squared before summing them up.  We technically should use the standard error of the estimate, but RMSE remains a common error metric.   We can always do both.  The standard error of the estimate takes into account the degrees of freedom which which now includes all of the independent variables (p).  We can get the standard error of the estimate from our 
 
-$RMSE = \sqrt{ \frac{1}{N}  \sum_{i=1}^{n} (\widehat{y}(\overrightarrow{x_i})-y_i)^2 } = \sqrt{\overline{(\widehat{y}(\overrightarrow{x_i})-y_i)^2}     }$
+$RMSE = \sqrt{ \frac{1}{N}  \sum_{i=1}^{n} [\widehat{y}(\overrightarrow{x_i})-y_i]^2 } = \sqrt{\overline{[\widehat{y}(\overrightarrow{x_i})-y_i]^2}     }$
 
-$s_{e}$ or $s_{y/x} = \sqrt{ \frac{1}{N-p-1}  \sum_{i=1}^{n} (\widehat{y}(\overrightarrow{x_i})-y_i)^2 }$
+$s_{e}$ or $s_{y/x} = \sqrt{ \frac{1}{N-p-1}  \sum_{i=1}^{n} [\widehat{y}(\overrightarrow{x_i})-y_i]^2 }$
 
 
 ```{r}
@@ -1217,6 +1243,6 @@ And finally our correlation coefficient (which is basically our coefficient of d
 ```
 
 
-And with that, we're done... Once again, this exercise demonstrates a lot of tricks just to show how you can use R for various statistics.  You may not use all of them in your encouters with R 
+And with that, we're done... Once again, this exercise demonstrates a lot of tricks just to show how you can use R for various statistics.  You may not use all of them in your encouters with R or even at all, but you may be able to cannibalize some of the tricks here for other applications.
 
 
