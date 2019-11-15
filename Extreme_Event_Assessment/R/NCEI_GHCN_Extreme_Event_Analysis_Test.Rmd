@@ -1,0 +1,778 @@
+---
+title: "NCEI GHCN Extreme Value Analysis"
+output: html_notebook
+---
+
+
+# 1 Goal
+
+1) Access NCEI Daily GHCN Data
+2) Explore Ways to Determine Return Periods for Extreme Events
+
+
+A reference for the extRemes package can be found here
+
+Gilleland, E., & Katz, R. (2016). extRemes 2.0: An Extreme Value Analysis Package in R. Journal of Statistical Software, 72(8), 1-39. doi:http://dx.doi.org/10.18637/jss.v072.i08 ( PDF Avaialble at https://www.jstatsoft.org/article/view/v072i08 )
+
+
+# 2  Libraries
+
+The following libraries are needed for this exercise.
+
+Tidyverse Packages
+
+  + [tidyverse](https://www.tidyverse.org) : Set of commonly-used Data Science packages for R that it can install and load all at once. In the long-run you probably also want to install the tidyverse package suite anyway. For this exercise this will include...   
+    - [ggplot2](https://ggplot2.tidyverse.org) : Create Elegant Data Visualizations Using the Grammar of Graphics
+    - [tibble](https://tibble.tidyverse.org) : Simple Data Frames
+    - [tidyr](https://tidyr.tidyverse.org) : Tools for shepherding data in data frames.
+    - [readr](https://readr.tidyverse.org) : Read Rectangular Text Data
+    - [purr](https://purrr.tidyverse.org) : Functional Programming Tools
+    - [dplyr](https://dplyr.tidyverse.org) : A grammar of data manipulation
+    - [stringr](https://stringr.tidyverse.org) : Simple, Consistent Wrappers for Common String Operations
+    - [forcats](https://forcats.tidyverse.org) : Tools for Working with Categorical Variables (Factors)
+    
+  + [lubridate](https://lubridate.tidyverse.org) : Time and Date Management
+  
+
+  
+Other Packages
+
+  + [rnoaa](https://www.rdocumentation.org/packages/rnoaa/) : Climate Data Online Services from NCEI 
+  
+    + [extRemes](https://www.rdocumentation.org/packages/extRemes) : Ridgeline plots with ggplot2
+    
+```{r}
+
+# Libraries
+
+  # Tidyverse resources
+
+  library(package = "tidyverse") # Multiple Tidyverse Resources
+  library(package = "lubridate") # Date-Time Control
+  library(package = "ggridges")  # Ridgeline plots with ggplot2
+
+
+  # NOAA Libraries
+
+  library(package = "rnoaa") # NCEI  Data Retrieval Package
+
+  # NCAR Libraries
+
+  library(package = "extRemes") # NCEI  Data Retrieval Package
+
+
+```
+
+# 3 Extracting Data
+
+## 3.1. Case and Inventory
+
+For this we are going to extract daily Global Historical Climate Network data from Rapid City Airport (the GHCN station ID for the airport is... **GHCND:USW00024090**) and can be found searching at this website:
+
+[https://www.ncdc.noaa.gov/cdo-web/search](https://www.ncdc.noaa.gov/cdo-web/search)
+
+We can get the details for the station using the option "stationid = 'GHCND:USW00024090'"
+
+```{r}
+
+# Extracting Data
+
+  # Station Details for Rapid City Airport , SD
+  
+  stationid_for_ncdcstations = 'GHCND:USW00024090'
+  
+  stationid_for_ghcn_pull    = 'USW00024090'
+
+  ncdc_ids = ncdc_stations(stationid = stationid_for_ncdcstations)
+  
+  ncdc_ids = ncdc_ids$data
+
+```
+
+
+Also to get an inventory of the avaialble data for this station we can use the [ncdc_datatypes()](https://www.rdocumentation.org/packages/rnoaa/versions/0.8.4/topics/ncdc_datatypes) command.
+
+```{r}
+
+  # Get Available Parameters for a given station from a specific dataset
+  
+  ncdc_datatypes(datasetid = 'GHCND',
+                 stationid = stationid_for_ncdcstations)$data
+
+```
+
+## 3.2 Pulling the Raw Data from NCDC/NCEI
+
+To pull the daily GHCN data for this station we use the [ghcnd()](https://www.rdocumentation.org/packages/rnoaa/versions/0.8.4/topics/ghcnd) function.  We should be just able to ask, again, for the station ID for the airport.
+
+```{r}
+
+# Pull the Raw Climate Data from a Single Station
+
+ghcn_data = ghcnd(stationid = stationid_for_ghcn_pull)
+
+ghcn_data
+
+```
+
+## 3.3 Making the Messy Raw Data from NCDC/NCEI look pretty
+
+As you can see this format isn't all that pretty. Data from NCEI/NCDC is archived by so one line of data is the whole 31-, 30-, 28- or 29-day month so all of the month is on one line.
+
+Luckily there is a function that pulls this out called [ghcnd_splitvars](https://www.rdocumentation.org/packages/rnoaa/versions/0.8.4/topics/ghcnd_splitvars)
+
+It will split the output of the ghcn() data into multiple data frames
+
+```{r}
+
+  # reshape the ghcn daily data input fields
+  
+  ghcn_data = ghcnd_splitvars(x = ghcn_data)
+  
+  # print(ghcn_data) # (this is messy it makes as many data "sub"-frames as you have variables
+                     #  you can uncomment 
+
+```
+
+
+The downside in the above output is that there are no units mentioned here.  But they *are* available on the original data website here:
+
+[https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt](https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt)
+
+From the dataset the five basic parameters are 
+
+| Code | Parameter Name                               | Units    |
+|------|----------------------------------------------|----------|
+| PRCP | Precipitation wrt 0000-0000 Local Time       | ⅒ of mm |
+| SNOW | Snowfall wrt 0000-0000 Local Time            | mm       |
+| SNWD | Snow depth wrt 0000-0000 Local Time          | mm       |
+| TMAX | Maximum temperature wrt 0000-0000 Local Time | ⅒ of °C |
+| TMIN | Minimum temperature wrt 0000-0000 Local Time | ⅒ of °C |
+
+And you may have 
+
+| Code | Parameter Name                               | Units    |
+|------|----------------------------------------------|----------|
+| TAVG | Average temperature wrt 0000-0000 UTC        | ⅒ of °C |
+
+These really are the only parameters I normally pull.
+
+I'm doing this by brute force and changing the temperature units to °F while I am at it...  
+
+```{r}
+
+  # Changing Units
+  
+  ghcn_data$tmax$tmax = ghcn_data$tmax$tmax / 10.0
+  ghcn_data$tmin$tmin = ghcn_data$tmin$tmin / 10.0
+  ghcn_data$tavg$tavg = ghcn_data$tavg$tavg / 10.0
+  ghcn_data$prcp$prcp = ghcn_data$prcp$prcp / 10.0
+  
+  
+  ghcn_data$tmax$tmax = ghcn_data$tmax$tmax * 9. / 5. + 32
+  ghcn_data$tmin$tmin = ghcn_data$tmin$tmin * 9. / 5. + 32
+  ghcn_data$tavg$tavg = ghcn_data$tavg$tavg * 9. / 5. + 32
+
+```
+
+## 3.4 Creating a Working Data Table
+
+Here I am only going to take the above basic variables (TMAX, TMIN, TAVG, PRCP, SNOW and SNWD) and force them into a single data frame using the row-bind [left_join()](https://www.rdocumentation.org/packages/base/versions/3.0.3/topics/cbind) function
+
+```{r}
+
+  daily_gcnd_frame = left_join(ghcn_data$tmin,   
+                               ghcn_data$tmax, 
+                               by = c("id", "date"))
+  
+  
+  daily_gcnd_frame = left_join(daily_gcnd_frame, 
+                               ghcn_data$prcp, 
+                               by=c("id", "date"))
+  
+  daily_gcnd_frame = left_join(daily_gcnd_frame, 
+                               ghcn_data$snow, 
+                               by=c("id", "date"))
+  
+  daily_gcnd_frame = left_join(daily_gcnd_frame, 
+                               ghcn_data$snwd,
+                               by=c("id", "date"))
+  
+  ghcn_data = daily_gcnd_frame
+  
+  remove(daily_gcnd_frame) # tidy as you go
+
+```
+
+We also have to drop the three quality flag variables and neatly reorder and drop lines with all missing data. ...
+
+```{r}
+
+  ghcn_data = ghcn_data %>% 
+    select(c(id,
+             date,
+             tmin,
+             tmax,
+             prcp,
+             snow,
+             snwd)) %>%
+    filter(!(is.na(tmin) & 
+             is.na(tmax) &
+             is.na(prcp) &
+             is.na(snow) &
+             is.na(prcp) &
+             is.na(snow) &
+             is.na(snwd))) %>%
+    arrange(date)
+
+
+  
+
+```
+
+And with that we can now [finally] play!
+
+# 4 Managing the Data... 
+
+We need to make sure that we have a continious data record. 
+
+First let's trim the front and end of the record to remove partial years at the beginning and end of the record.
+
+```{r}
+
+# Getting first complete year of record.
+
+  min_date = min(ghcn_data$date)
+  
+  if ((month(min_date) != 1) |
+      (day(min_date)   != 1) ) 
+    {
+      ghcn_data = ghcn_data %>%
+        filter(year(date) >= ((year(min_date)+1)))
+    }
+    
+# Getting last complete year of record.
+  
+  max_date = max(ghcn_data$date)
+  
+  if ( (month(max_date) != 12) &
+       (day(max_date)   != 31) )
+    {
+      ghcn_data = ghcn_data %>%
+        filter(year(date) <= ((year(max_date)-1)))
+  }
+
+# Insert Any Fully Missing Days
+    
+  min_date = min(ghcn_data$date)
+  max_date = max(ghcn_data$date)
+  
+  temp_frame = tibble(date = seq(from = min_date,
+                                 to   = max_date,
+                                 by   = "1 day"))
+  
+  ghcn_data = right_join(x  = ghcn_data,
+                         y  = temp_frame,
+                         by = "date")
+  
+  
+  
+ # List Missing Days (*we're only checking precip data here*)
+  
+  ghcn_data %>% filter(is.na(ghcn_data$prcp))
+ 
+  proportionMissing = sum(is.na(ghcn_data$prcp)) / sum(!is.na(ghcn_data$prcp))
+  
+  str_c("Proportion Missing (missing:available) = ",
+        proportionMissing)
+
+```
+If and ONLY if you feel that you can fill any missing data with climatological or zero values you can do so but you should document(as above) the missing dates.  
+
+For "safety" I am creating a new variable where those values are replaced by zero.
+
+```{r}
+
+# fill the SMALL number of missing days with zeros and whistle in the dark
+
+
+whistle_in_the_dark = TRUE
+
+if (whistle_in_the_dark) 
+  {
+    ghcn_data_unmissing = ghcn_data %>% 
+                              mutate(prcp = replace(x      = prcp,
+                                                    list   = is.na(prcp),
+                                                    values = 0))
+  }
+
+ 
+```
+
+
+Let's make a histogram of the data we have.
+
+
+
+```{r}
+
+
+ggplot(data = ghcn_data) +   # use ghcn_data as the source of the data
+  
+  aes(x = prcp) +
+
+  theme_bw() +              # use a very simple ploting theme
+  
+  ggtitle(label    = "Daily Global Historical Climate Data",
+          subtitle = ncdc_ids$name) + 
+  
+  ylab(label = "Events") +
+  
+  xlab(label = "Daily Rainfall (mm)") +
+  
+  geom_histogram(fill = "green")  # make a simple line plot (and make it pink)
+
+
+```
+
+Obviously we can guess that most of those days are either no rain or a trace of rain.  We can remove those and try again.
+
+
+
+```{r}
+
+
+ggplot(data = ghcn_data %>% filter(prcp > 0)) +   # tidy out 
+  
+  aes(x = prcp) +
+
+  theme_bw() +              # use a very simple ploting theme
+  
+  ggtitle(label    = "Daily Global Historical Climate Data",
+          subtitle = ncdc_ids$name) + 
+  
+  labs(caption = "Zero and Trace Events Removed") + 
+  
+  ylab(label = "Events") +
+  
+  xlab(label = "Daily Non-Zero Rainfall (mm)") +
+  
+  geom_histogram(fill = "green")  # make a simple line plot (and make it pink)
+
+
+```
+
+Likewise we can identify an extreme event thesholds as those only being in the top 5% of daily rainfall events 
+
+
+```{r}
+
+# Establish a 95% non-zero rain threshold (a reasonable S.W.A.G.)
+
+subset = ghcn_data %>% filter(prcp > 0)
+threshold = quantile(x     = subset$prcp,
+                     probs = 0.95)
+
+remove(subset) # "tidy as you go"
+
+str_c("75% Daily Non-Zero Rain Threshold is ",
+      threshold,
+      " mm")
+
+ggplot(data = ghcn_data %>% filter(prcp > threshold)) +   # tidy out 
+  
+  aes(x = prcp) +
+
+  theme_bw() +              # use a very simple ploting theme
+  
+  ggtitle(label    = "Daily Global Historical Climate Data",
+          subtitle = ncdc_ids$name) + 
+  
+  labs(caption = str_c("Events Under ", threshold," mm Removed")) + 
+  
+  ylab(label = "Events") +
+  
+  xlab(label = "Daily Over 75% Threshold Non-Zero Rainfall (mm)") +
+  
+  geom_histogram(fill = "green")  # make a simple line plot (and make it pink)
+
+
+```
+
+
+
+# 5 Time to Explore Some Extreme Events
+
+## 5.1 Classic Method for Returns Intervals
+
+The "old school" way to do this is as follows
+
+1) Collect the designated extreme value (e.g., maximum daily rainfall) for an reference period.  For a yearly return system, we aggregage by year.  (This helps mitigate missing data provided that the missing data is missing because an extreme event broke your observation equipment!)
+2) Sort those values by from maximium value first, to minimum value last.  (This is a "decending" order)
+3) Create a variable to represent the "rank," _r_, from highest (1) to lowest (_n_, where _n_ = the total number of years).
+4) This rank value can be coverted to a return interval, _RP_ so that _RP_(_x_) = (_n_-1)/_r_ where _r_ is the descening rank from item (3).
+5) It also can be expressed as a probability of occurance per year _p_(_x_) = 1/_RP_
+
+```{r}
+
+  # calculations precipitation ranking
+
+
+  precip_by_year = ghcn_data %>%
+    group_by(year = year(date)) %>%
+    summarise(max_daily_prcp = max(x     = prcp,
+                                   na.rm = TRUE))
+  nYears = nrow(x       = precip_by_year)
+
+  # rank values from high to low
+
+  prcp_ranked_by_year = precip_by_year %>% 
+    arrange(desc(max_daily_prcp))
+  
+  # rank values from high to low
+
+  prcp_ranked_by_year = prcp_ranked_by_year %>%
+    mutate(rank            = rank(desc(max_daily_prcp)))
+  
+  # get return intervals
+
+  prcp_ranked_by_year = prcp_ranked_by_year %>%
+    mutate(return_interval = (nYears - 1) / rank)
+
+  # get probability of occurance per year
+  
+  prcp_ranked_by_year <- prcp_ranked_by_year %>% 
+    mutate(prob_of_event = ((1/return_interval)))  
+
+
+  # display table
+  
+  prcp_ranked_by_year
+
+```
+Let's also take a peak at the histogram when aggregated to years rather than daily.
+```{r}
+
+
+ggplot(data = precip_by_year) +   # tidy out 
+  
+  aes(x = max_daily_prcp) +
+
+  theme_bw() +              # use a very simple ploting theme
+  
+  ggtitle(label    = "Daily Global Historical Climate Data",
+          subtitle = ncdc_ids$name) + 
+  
+  labs(caption = "Aggregated by Yearly Maximum") + 
+  
+  ylab(label = "Events") +
+  
+  xlab(label = "Peak Daily Annual Rainfall (mm)") +
+  
+  geom_histogram(fill = "blue")  # make a simple line plot (and make it pink)
+
+
+```
+We can also make this fancier and make a smoothed distribution of our histrogram (this'll be important later)
+```{r}
+
+
+ggplot(data = precip_by_year) +   # tidy out 
+  
+  aes(x = max_daily_prcp) +
+
+  theme_bw() +              # use a very simple ploting theme
+  
+  ggtitle(label    = "Daily Global Historical Climate Data",
+          subtitle = ncdc_ids$name) + 
+  
+  labs(caption = "Aggregated by Yearly Maximum") + 
+  
+  ylab(label = "Probability") +
+  
+  xlab(label = "Peak Daily Annual Rainfall (mm)") +
+  
+  geom_density(fill = "blue",
+               color = "blue",
+               trim  = FALSE)  
+
+
+```
+
+
+Let's plot the frequency of returns by the observed precipitation period.
+
+
+```{r}
+
+#  plot rainfal vs return period.
+
+ggplot(data = prcp_ranked_by_year) + 
+  
+  aes(x =  return_interval,
+      y = max_daily_prcp)  +
+  
+  theme_bw() + 
+  
+  ggtitle(label    = "Daily Global Historical Climate Data",
+          subtitle = ncdc_ids$name) + 
+  
+  xlab(label = "Estimated Yearly Return Interval")  + 
+
+  ylab(label = "Maximum Daily Rainfall (mm)")  + 
+
+  
+  geom_point()
+
+```
+
+
+Like many return periods these data resmble a log plot so that _prec_ = _f_( ln(_RP_))
+
+We can fit a curve to this to see if we can get a reasonable relationship.
+
+```{r}
+
+
+#  plot rainfal vs return period -- with curve fit
+
+ggplot(data = prcp_ranked_by_year) + 
+  
+  aes(x = return_interval,
+      y = max_daily_prcp)  +
+  
+  theme_bw() + 
+  
+  ggtitle(label    = "Daily Global Historical Climate Data",
+          subtitle = ncdc_ids$name) + 
+  
+  xlab(label = "Estimated Yearly Return Interval")  + 
+
+  ylab(label = "Maximum Daily Rainfall (mm)")  + 
+  
+  stat_smooth(formula = y ~ log(x),
+              na.rm   = TRUE) +
+
+  geom_point()
+
+
+
+```
+
+
+We also can extrapolate to longer events.
+
+```{r}
+
+
+
+#  plot rainfal vs return period -- with curve fit -- extended
+
+ggplot(data = prcp_ranked_by_year) + 
+  
+  aes(x = return_interval,
+      y = max_daily_prcp)  +
+  
+  theme_bw() + 
+  
+  ggtitle(label    = "Daily Global Historical Climate Data",
+          subtitle = ncdc_ids$name) + 
+  
+  xlab(label = "Estimated Yearly Return Interval")  + 
+
+  ylab(label = "Maximum Daily Rainfall (mm)")  + 
+  
+  
+
+  xlim(0, 100) +
+
+  geom_point() + 
+
+  stat_smooth(formula   = y ~ log(x),
+              method    = "lm", 
+              fullrange = TRUE) 
+
+
+```
+
+
+
+
+
+To get the actual values we can run the function that sits inside the geom_smooth function, [lm](https://www.rdocumentation.org/packages/stats/versions/3.6.0/topics/lm)
+
+
+```{r}
+
+# getting coefficients for the linear model
+
+lmFit_yearly_return_period_vs_precp = lm(formula =max_daily_prcp ~ log(return_interval), 
+                                         data = prcp_ranked_by_year)
+
+summary(lmFit_yearly_return_period_vs_precp)
+
+
+```
+
+likewise, we can apply the model to any external data with the [predict]() function
+
+```{r}
+
+# applying the model to select values
+
+test_return_periods = tibble(return_interval = c(5, 10, 50, 100, 500))
+
+test_return_periods$precip_predicted = predict.lm(object  = lmFit_yearly_return_period_vs_precp,
+                                                  newdata = test_return_periods)
+
+test_return_periods
+```
+
+## 5.2 The fancy newfangled way to do this.
+
+Along with the classic method there are methods based on probability distributions.
+
+The [NCAR ExtRemes Package](https://ral.ucar.edu/staff/ericg/extRemes/) 
+
+This function is designed to fit a curve to the earier distributions we have.  (The clost)
+
+```{r}
+
+fit_GEV_yearly  = fevd(x          = precip_by_year$max_daily_prcp, #
+                      verbose    = TRUE,
+                      units      = "mm",
+                      time.units = "year",
+                      type       = "GEV"
+                      )
+
+summary(fit_GEV_yearly)
+
+plot(fit_GEV_yearly)
+
+```
+
+
+That's not all that pretty but we can focus for now on the lower right which is basically the same plot classic method by requesting the "return level" 
+```{r}
+
+# plot just the return periods.  We'll make it prettier later.
+
+plot(fit_GEV_yearly, type = c("rl"))
+
+
+```
+
+You can also do this with daily values but you will need to use that 95% daily percentile value as a threshold.  You;ll need to have no missing data here so we'll use the whistle-in-the-dark version.
+
+
+
+```{r}
+
+fit_GP_daily   = fevd(x          = ghcn_data_unmissing$prcp, #
+                      verbose    = TRUE,
+                      units      = "mm",
+                      threshold  = threshold,
+                      time.units = "365.25/year",
+                      type       = "GP")
+
+summary(fit_GP_daily)
+
+plot(fit_GP_daily)
+
+```
+
+and again to blow things up on that last plot... 
+
+
+```{r}
+
+
+# plot just the return periods.  We'll make it prettier later.
+
+plot(fit_GP_daily, type = c("rl"))
+
+```
+
+# 6 Comparing these methods
+
+We can use a the [return.level](https://www.rdocumentation.org/packages/extRemes/versions/2.0-10/topics/return.level)
+
+It works like the previous predict() function
+
+
+```{r}
+
+fitted_return_periods_GP_daily       = tibble(return_interval = 2:100)
+fitted_return_periods_GEV_yearly     = tibble(return_interval = 2:100)
+fitted_return_periods_classic_yearly = tibble(return_interval = 2:100)
+
+fitted_return_periods_GP_daily$method       = "GP Daily"
+fitted_return_periods_GEV_yearly$method     = "GEV Yearly"
+fitted_return_periods_classic_yearly$method = "Classic"
+
+fitted_return_periods_GP_daily$max_daily_prcp  = 
+            return.level(x             = fit_GP_daily,
+                         return.period = fitted_return_periods_GP_daily$return_interval)
+
+fitted_return_periods_GEV_yearly$max_daily_prcp  = 
+            return.level(x             = fit_GEV_yearly,
+                         return.period = fitted_return_periods_GEV_yearly$return_interval)
+
+fitted_return_periods_classic_yearly$max_daily_prcp  = 
+            predict.lm(object  = lmFit_yearly_return_period_vs_precp,
+                       newdata = fitted_return_periods_classic_yearly)
+
+
+
+
+```
+
+Let's collect these into a single data frame...
+
+```{r}
+
+# concatenate (slap together) all the data frames
+
+method_comparisons = rbind(fitted_return_periods_GP_daily, fitted_return_periods_GEV_yearly)
+method_comparisons = rbind(method_comparisons,             fitted_return_periods_classic_yearly)
+
+
+```
+
+and plot.. 
+
+```{r}
+
+
+
+#  plot rainfal vs return period -- with curve fit -- extended
+
+ggplot(data = method_comparisons) + 
+  
+  aes(x     = return_interval,
+      y     = max_daily_prcp,
+      color = method)  +
+  
+  theme_bw() + 
+  
+  ggtitle(label    = "Daily Global Historical Climate Data",
+          subtitle = ncdc_ids$name) + 
+  
+  xlab(label = "Estimated Yearly Return Interval")  + 
+
+  ylab(label = "Maximum Daily Rainfall (mm)")  + 
+  
+  
+
+  xlim(0, 100) +
+
+  geom_line()
+
+
+
+```
+
+
+So all three results diverge a longer return intervals but overall the displacement isn't as bad as you'd maybe guess.
+
+

@@ -1,9 +1,12 @@
 ---
-title: Visualizing Statistics and Regressions from a Spreadsheet using R
+title: "Visualizing Statistics and Regressions from a Spreadsheet using R"
 output:
-  html_notebook: 
-    toc: true
   pdf_document: default
+  html_notebook:
+    toc: yes
+  html_document:
+    df_print: paged
+    toc: yes
 --- 
 
 This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
@@ -12,7 +15,7 @@ These notebooks are typically this is designed to create a pleasing viewing envi
 
 The source code for this R notebook (Rmd suffixed files), when stored as web pages (html files), can be downloaded by clicking the button at the top of the page.
 
-If viewing the source code in R Studio, try executing each R "chunk" by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+If viewing the source code in R Studio, try executing each R "chunk" by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. z
 
 
 **Warning. Typos are *Legion*!**
@@ -39,10 +42,16 @@ Some of these libraries or "packages" come with R.  Others will have to be insta
 Also in this exercise, we're going to use the [tidyverse](https://www.tidyverse.org) set of packages.  Tidyverse is a set of co-developed tools for data science in R.  This is the new big thing in R and is widely used so we are just going to jump in here.  SD Mines has a course beyond Engineering Stats, [MATH 443/543 (Data Analysis)](http://ecatalog.sdsmt.edu/preview_course_nopop.php?catoid=17&coid=26973) that leverages this set of packages.
 
 * Install Us First
-  + [tidyverse](https://www.tidyverse.org) : Set of commonly-used Data Science packages for R that it can install and load all at once. In the long-run you probably also want to install the tidyverse package suite anyway. For this exercise this will include...
-    - [gplot2](https://ggplot2.tidyverse.org) : Create Elegant Data Visualizations Using the Grammar of Graphics
-    - [tidyr](https://tidyr.tidyverse.org) : tools for shepherding data in data frames.
+  + [tidyverse](https://www.tidyverse.org) : Set of commonly-used Data Science packages for R that it can install and load all at once. In the long-run you probably also want to install the tidyverse package suite anyway. For this exercise this will include...   
+    - [ggplot2](https://ggplot2.tidyverse.org) : Create Elegant Data Visualizations Using the Grammar of Graphics
+    - [tibble](https://tibble.tidyverse.org) : Simple Data Frames
+    - [tidyr](https://tidyr.tidyverse.org) : Tools for shepherding data in data frames.
+    - [readr](https://readr.tidyverse.org) : Read Rectangular Text Data
+    - [purr](https://purrr.tidyverse.org) : Functional Programming Tools
+    - [dplyr](https://dplyr.tidyverse.org) : A grammar of data manipulation
     - [stringr](https://stringr.tidyverse.org) : Simple, Consistent Wrappers for Common String Operations
+    - [forcats](https://forcats.tidyverse.org) : Tools for Working with Categorical Variables (Factors)
+
   + [readxl](https://www.rdocumentation.org/packages/readxl/versions/1.1.0) : also part of the [tidyverse](https://www.tidyverse.org) package suite for reading traditional excel spreadsheets.  
   + [moderndive](Tidyverse-Friendly Introductory Linear Regression) : Tidyverse-Friendly Introductory Linear Regression
 
@@ -67,7 +76,8 @@ Also in this exercise, we're going to use the [tidyverse](https://www.tidyverse.
 
   # Tidyverse Handling Libraries
 
-  library(package = "tidyverse")  # main tidyverse suite
+    
+library(package = "tidyverse")  # main tidyverse suite
   library(package = "readxl")     # Read Excel Files
   library(package = "moderndive") # regression support
 
@@ -114,7 +124,7 @@ It can be found here at [http://kyrill.ias.sdsmt.edu/cee_284/Base_Concrete_Slump
 
 The relevant page and screenshot is below.  For drama-free R import you are probably best off keeping a page on your spreadsheet file that is very simple, with numbers going down, and a single line for Row-1 with the headers of each column.  If you want to get fancy on other pages that you'd turn in as tables in reports, you can do that on another spreadsheet page.
 
-![Concrete Spreadsheet Screenshot](http://kyrill.ias.sdsmt.edu/cee_284/Base_Concrete_Slump_Test_for_R.png)
+![Concrete Spreadsheet Screenshot](http://kyrill.ias.sdsmt.edu/wjc/eduresources/Base_Concrete_Slump_Test_for_R.png)
 
 To crack open the spreadsheet we will want to use the [read_excel](https://www.rdocumentation.org/packages/readxl/versions/1.1.0/topics/read_excel) function.
 
@@ -139,8 +149,8 @@ You can read the spreadsheet from a local drive or from a website.
   # I am keeping a copy of these spreadsheet at the URL below.  It can be downloaded automatically
   #   and then loaded.  We can also discretely delete it when done.
 
-      spreadsheet_url = "http://kyrill.ias.sdsmt.edu/cee_284/Base_Concrete_Slump_Test_for_R.xlsx"
-    
+      spreadsheet_url = "http://kyrill.ias.sdsmt.edu/wjc/eduresources/Base_Concrete_Slump_Test_for_R.xlsx"
+   
       download.file(url      =   spreadsheet_url, # URL location
                     destfile = spreadsheet_name) # local downloaded location
       
@@ -148,9 +158,9 @@ You can read the spreadsheet from a local drive or from a website.
   
   # this command will read the file
 
-  concrete = read_excel(path      = spreadsheet_name, # local spreadsheet location
-                        sheet     =           "Data", # page of spreadsheet
-                        col_names =             TRUE) # first row are the column headers
+  concrete = read_excel(path      = spreadsheet_name,  # remove spreadsheet location
+                        sheet     = "Data",            # page of spreadsheet
+                        col_names = TRUE)              # first row are the column headers
   
   
   # clean up your hard drive!  Don't be like me!
@@ -1243,6 +1253,6 @@ And finally our correlation coefficient (which is basically our coefficient of d
 ```
 
 
-And with that, we're done... Once again, this exercise demonstrates a lot of tricks just to show how you can use R for various statistics.  You may not use all of them in your encouters with R or even at all, but you may be able to cannibalize some of the tricks here for other applications.
+And with that, we're done... Once again, this exercise demonstrates a lot of tricks just to show how you can use R for various statistics.  You may not use all of them in your encouters with R for linear or multivariate regression or even at all, but you may be able to cannibalize some of the tricks here for other applications.
 
 

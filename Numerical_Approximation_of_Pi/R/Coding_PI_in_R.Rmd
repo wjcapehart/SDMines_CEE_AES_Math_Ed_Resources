@@ -1,0 +1,149 @@
+---
+title: "Pi Code Demonstration in R"
+output: html_notebook
+---
+
+# Introduction 
+
+With PI as our "posterchild" code we want to show you how similar the code appears between language.  As well as the [sometimes] passive-aggressive differences.
+
+Here we are doing with R.  
+
+R technically is not supposed to be a programming language, but rather a statistical software resource.  But since so many fields use statistics, R exists on a lot of people’s machines and it’s free, it is often seen as a path of least resistance when it comes to being a coding platform.  
+
+Also the R-Studio environment has created a nice environment for programming not only in R but in other languages.
+
+With the PI example we can crunch PI with the core elements of R without having to use any fancy libraries which is so often the case with R.
+
+Let’s first review the pseudocode.   
+
+## Math Behind Approximating Pi
+
+Our approximation method here is based on the arctangent function:
+
+$$\pi =\int^{1}_{0} \frac{4}{1+x^2} dx = 4\arctan1.0 $$
+
+We wish to approximate this relationship using Reimann sums, shown here: 
+
+![PI Reimann Sum](http://kyrill.ias.sdsmt.edu/wjc/eduresources/PI_Integration_Figure.png)
+
+Doing this we discretize the above integral formula so that for an increment of $\Delta x = 1/N$,
+
+$$\pi =\frac{1}{N}\sum_{i=1}^{N}   \frac{4}{1+x^2}$$
+
+
+
+## Coding the algorythm in R.
+
+Be aware that when I code in R I am very anal-retentive and use more arguments and elements that many R users have.  Functions in R like the ["seq"](https://www.rdocumentation.org/packages/base/versions/3.6.1/topics/seq) function often label the arguments (or variables that are passed into functions).  Most users don't use them if they don't have to, but I do.
+
+There is also a function we need to make a more detailed "print" statement.  That's the ["paste"](https://www.rdocumentation.org/packages/base/versions/3.6.1/topics/paste) function
+
+```{r}
+
+N  = 10
+pi = 0.0
+
+h  = 1.0 / N
+
+for (n in seq(from = 1,
+              to   = N,
+              by   = 1) )
+  {
+      x  = h * (n - 0.5)
+      pi = pi + h * (4 / (1 + x^2))
+      
+      print(paste("   n = ", n, 
+                  ";  x = ", x, 
+                  "; pi = ", pi))
+    
+  }
+  
+
+
+
+```
+
+
+## Making arrays to create a plot
+
+Working with R and arrays cen be done serveral ways.  Here is one that does what we need with "Maximum Satisfaction with Minimal Effort"
+
+Here we use that sequence function from above and then we "clone" that newly made array by just setting a new array equal to the old one (and in this case, multiupying it by zero).
+
+```{r}
+#####################################################
+#
+# Creating two arrays for plotting
+#
+
+N_array   = seq(from =  1,   # using the sequence functiom to make a 
+                to   =  N,   # series going from 1 to N
+                by   =  1)
+
+pi_array = N_array * 0.0  # playing it lazy!
+
+#
+#####################################################
+
+```
+
+And now we wrap this N_array loop around our original psuedocode loop 
+
+
+```{r}
+#####################################################
+#
+# We first create an outer look with the N_array
+#
+
+for (N in N_array)
+  {
+    
+      h     = 1.0 / N
+      pi[N] = 0
+      
+      for (n in seq(from = 1,
+                    to   = N,
+                    by   = 1) )
+      {
+          x     = h * (n - 0.5)
+          pi[N] = pi[N] + h * (4 / (1 + x^2))
+      }
+      
+      print(paste("  N = ", N, "; pi = ", pi[N]))
+    
+  }
+
+#
+#####################################################
+
+```
+
+## Ploting our results
+
+There are simple ways to make a plot in R and there are very fancy ways to make professional looking graphics in R.  
+
+In this example we're going to make a very simple one.
+
+
+```{r}
+
+
+#####################################################
+#
+# We first create an outer look with the N_array
+#
+
+plot(x     = N_array,
+     y     = pi,
+     main  = "Approximating Pi for various Reimann Sums",
+     ylab  = "Estimated value of Pi",
+     xlab  = "Number of Reimann Sum Iterations")
+
+#
+#####################################################
+
+```
+
+

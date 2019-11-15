@@ -1,0 +1,525 @@
+---
+title: "Rapid City Land Use Principal Components Example (Remote Sensing)"
+output: html_notebook
+header-includes:
+  - \usepackage{color}
+---
+
+# 1.0 Intoduction
+
+
+# 2.0 Libraries
+
+Let's load our libraries for this exercise.
+
+
+* Install Us First
+  + [tidyverse](https://www.tidyverse.org) : Set of commonly-used Data Science packages for R that it can install and load all at once. In the long-run you probably also want to install the tidyverse package suite anyway. For this exercise this will include...
+    - [gplot2](https://ggplot2.tidyverse.org) : Create Elegant Data Visualizations Using the Grammar of Graphics
+    - [tibble](https://tibble.tidyverse.org) : Simple Data Frames
+    - [tidyr](https://tidyr.tidyverse.org) : Tools for shepherding data in data frames.
+    - [readr](https://readr.tidyverse.org) : Read Rectangular Text Data
+    - [purr](https://purrr.tidyverse.org) : Functional Programming Tools
+    - [dplyr](https://dplyr.tidyverse.org) : A grammar of data manipulation
+    - [stringr](https://stringr.tidyverse.org) : Simple, Consistent Wrappers for Common String Operations
+    - [forcats](https://forcats.tidyverse.org) : Tools for Working with Categorical Variables (Factors)
+
+  + [FactoMineR](https://www.rdocumentation.org/packages/FactoMineR/versions/1.41) : Multivariate Exploratory Data Analysis and Data Mining with R
+  + [factoextra](https://www.rdocumentation.org/packages/factoextra/versions/1.0.5) : Extract and Visualize the Results of Multivariate Data Analyses
+  + [corrplot](https://www.rdocumentation.org/packages/corrplot/versions/0.84) : Visualization of a Correlation Matrix
+
+
+```{r}
+
+library(package = "tidyverse")  # Tidyverse suite of packages data analysis
+
+library(package = "FactoMineR") # Multivariate Exploratory Data Analysis and Data Mining
+
+library(package = "factoextra") # Extract and Visualize the Results of Multivariate Data Analyses
+library(package = "corrplot")   # Visualization of a Correlation Matrix
+
+```
+
+
+
+# Data Set: Landsat 7 Enhanced Thematic Mapper Data for Rapid City, SD
+
+For this demonstration we are using a satellite image from Rapid City.  Here we are using Landsat 7 ETM+ data.
+
+The band combinations are 
+
+| Band Name | Wavelength Range | Spectrum Region          |
+|-----------|------------------|--------------------------|
+|  ETM1     |   0.45-0.52 μm   | "Blue"                   |
+|  ETM2     |   0.52-0.60 μm   | "Green"                  |
+|  ETM3     |   0.63-0.69 μm   | "Red"                    |
+|  ETM4     |   0.77-0.90 μm   | "Near Infra Red (IR)"    |
+|  ETM5     |   1.55-1.75 μm   | "Middle Short-wave IR 1" |
+|  ETM7     |   2.09-2.35 μm   | "Middle Short-wave IR 2" |
+
+Plotted out for a typical land cover reflectences they look like this:
+
+![Landsat Bands](http://kyrill.ias.sdsmt.edu/wjc/github_math_tools/PCA/Landsat/Landsat_7_Bands.png)
+The combination of these land cover types and bands through which we view them can be interpreted by we pattern-seeking mammals as these things called "colors," and we can pick them off of images and maps.
+
+We can do that here with the visible bands : ETM1 [Blue], ETM2[Green] and ETM3[Red])
+![Rapid City TM](http://kyrill.ias.sdsmt.edu/wjc/github_math_tools/PCA/Landsat/Landsat_Rap.png)
+We use color and pattern identification to identify specific land covers.  
+
+Let's identify 10 land surface categories:
+
+$\color{blue}{Water}$, $\color{seagreen}{Forest 1}$, $\color{darkcyan}{Forest 2}$, $\color{red}{Developed}$, $\color{grey}{Exposed}$, $\color{green}{Developed}$, $\color{chartreuse}{Stressed Grass}$, $\color{yellow}{Senesced Grass 1}$, $\color{goldenrod}{Senesced Grass 1}$, $\color{sienna}{Sienna}$, and select a number of samples from each category
+
+![Rapid City TM with Classes](http://kyrill.ias.sdsmt.edu/wjc/github_math_tools/PCA/Landsat/Landsat_Rap_With_Classes.png)
+
+When completed and beaten into shape for R in this exercize we have the following dataset.  We are also going to do a very simple atmospheric correction called "Dark Object Subtraction" in which we will set the darkest pixel (in this case deep water) to zero which is a reasonable assumption in which anything that is in excess of a zero reflective office is backscattered radiation back to the satellite.  
+
+
+```{r}
+
+load(file = url("http://kyrill.ias.sdsmt.edu/wjc/github_math_tools/PCA/Landsat/Landsat_7_Rapid_City_ETM_2001-08-16_1725_Classes.Rdata")) 
+
+# Dark Object Subtraction (assuming water target)
+  
+  Landsat_7_Samples$ETM1 =  Landsat_7_Samples$ETM1 - min( Landsat_7_Samples$ETM1 )
+  Landsat_7_Samples$ETM2 =  Landsat_7_Samples$ETM2 - min( Landsat_7_Samples$ETM2 )
+  Landsat_7_Samples$ETM3 =  Landsat_7_Samples$ETM3 - min( Landsat_7_Samples$ETM3 )
+  Landsat_7_Samples$ETM4 =  Landsat_7_Samples$ETM4 - min( Landsat_7_Samples$ETM4 )
+  Landsat_7_Samples$ETM5 =  Landsat_7_Samples$ETM5 - min( Landsat_7_Samples$ETM5 )
+  Landsat_7_Samples$ETM7 =  Landsat_7_Samples$ETM7 - min( Landsat_7_Samples$ETM7 )
+  
+
+```
+
+Here are the contents of the dataset we made. 
+
+```{r}
+
+# print Dataset
+  
+print(Landsat_7_Samples)
+
+```
+
+Along with the data the Rdata file includes color map data... 
+
+
+
+```{r}
+
+# enframe(Landsat_7_Samples_ColorMap)
+
+```
+
+
+
+
+... band information, and ... 
+
+```{r}
+
+# print Band Data 
+
+# enframe(Landsat_7_Bands_Metadata)
+
+```
+
+... time and data information
+
+```{r}
+
+# print Time Metadata (as above it's originally an array)
+
+print(Landsat_7_Time_Metadata)
+
+```
+
+If we plot the data by spectra we can get some interesting shapes.  
+
+The following is one of the more iconic patterns, the Red, Near Infrared Arrowhead.  
+
+
+```{r}
+
+# Plot Classic Red-NIR Arrowhead
+
+ggplot(data = Landsat_7_Samples) + # create a graphic object 
+  
+  aes(x     = ETM3,                # select variables that will be plotted
+      y     = ETM4,                # and mapped.
+      color = Class) + 
+  
+  theme_bw() +                     # simple black and white theme.
+  
+  coord_fixed() +                           # creates a nice 1:1 proportion in plotting.
+  
+  ggtitle(label    = "Landsat 7 ETM+ Data", 
+          subtitle = "Rapid City, SD, 2001-08-16 1725 UTC") +
+  
+  xlab(label = "0.66-μm Reflectance") +     # label your axes!
+  ylab(label = "0.84-μm Reflectance") +     # ALL of them!
+
+  xlim(0, max(Landsat_7_Samples$ETM3,       # here we are making a nice square plot
+              Landsat_7_Samples$ETM4)) +    # where both axis have the same extent...
+  
+  ylim(0, max(Landsat_7_Samples$ETM3,       # ... going from 0 to the max values
+              Landsat_7_Samples$ETM4)) + 
+
+  scale_color_manual(values = Landsat_7_Samples_ColorMap) + # use our color table from above
+  
+  geom_point(alpha = 0.5)  # and throw out a scatter point set.
+
+```
+
+As you can see the data seems to be "oriented" diagonally along a line with an edge running "Southwest to Northeast."   To quote Toby Carlson, my MS and PhD advisor, "When nature gives you an edge, she's trying to tell you something!"  That edge along the Red, Grey and Blue pixels is what we often call the "line of soils".   At a right angle to it, vegetation runs from "Southeast to Northwest."  
+
+This also represents a good way to demonstrate Principle Components in action.  The Red and Near-Infrared Bands are redundant: As pattern-seeking mammalsm we can imagine rotating the graph 45 degrees to view the data) and have an axis for brightness of soil and another intensity of vegetation.
+
+It would be nice to be able to represent "soily-ness" by a single "band" or layer or score.  Likewise the same for vegetation or anything else.  
+
+If we look at all of our data bands against each other we can see that a number of bands are correlated.
+
+To do this we create a correlation matrix $\mathbf{R}$ (or a covariance matrix $\mathbf{S}$)
+
+
+```{r}
+# Calculating and Displaying 
+
+  # Step 1: Collect ONLY the values you want to use in the PCA
+
+  Landsat_Reflectances = Landsat_7_Samples %>% 
+                              select(c(ETM1,
+                                       ETM2,
+                                       ETM3,
+                                       ETM4,
+                                       ETM5,
+                                       ETM7))
+```
+
+The covariance matrix is expressed for each element a number of ways depending on your community's disciplines.
+
+by individual element in the matrix it is often expressed as... 
+
+$$S_{ij} = \frac{ \sum(x_i-\overline{x_i})(x_j-\overline{x_j}) }{N-1}  \approx \Bigg[ \overline{  (x_i-\overline{x_i})(x_j-\overline{x_j})  }
+ = \overline{  {x_i}'{x_j}'  }\Bigg] $$
+ 
+ or in full vector/matrix form as... 
+$$\mathbf{S}_{\vec{x}} = \frac{ \sum(\vec{x}-\overline{\vec{x}})(\vec{x}-\overline{\vec{x}})^T }{N-1}
+  \approx \Bigg[ \overline{  (\vec{x}-\overline{\vec{x}})(\vec{x}-\overline{\vec{x}})^T  }
+ = \overline{  {\vec{x}}'{\vec{x}}'^T }\Bigg]$$
+
+```{r}
+  # Step 2: calculate the covariance matrix
+
+  cov(Landsat_Reflectances)
+  
+```
+
+
+
+(those values long the diagonal are the *variances* of $x_i$)
+
+The correlation matrix is the covariance matrix with each element scaled by the standard deviation of the corresponding variables so each element is the $r^2$ of element $i$ & $j$ so that
+
+$$R_{ij} = \frac{ \sum(x_i-\overline{x_i})(x_j-\overline{x_j}) }{(N-1) s_i s_j}  \approx \Bigg[\frac{ \overline{  (x_i-\overline{x_i})(x_j-\overline{x_j})  }
+}{s_i s_j} = \frac{\overline{  {x_i}'{x_j}'}}{s_i s_j}  = r^2_{ij}\Bigg]$$
+and corresponding to the above formula and matrix, the diagonal values are 1:1 perfect $r^2$s.  
+
+
+```{r}
+  # Step 2: calculate the correlation matrix
+
+  cor(Landsat_Reflectances)
+  
+```  
+Along the diagnonal those values should always be one. But those high values off the diagonal indicate a lot of redundancy in which each value can be easily predicted by another.  
+
+Also... matrices of numbers making your eyes hate you?  No worries.  Try this function for a graphical way to look at the correlation matrix!  (Sorry, there is no such plot for the covariance matrix)
+
+```{r}
+  # As above but pretty
+  
+  corrplot(corr   = cor(Landsat_Reflectances),   # your correlation matrix
+           method = "ellipse")
+           
+
+```  
+  
+  
+  
+
+
+Another benefit that would emerge from decorrelating the data will be that the information will be concentrated into a fewer number of layers than the original data.
+
+But HOW do we do this?  We could arbitrarily rotate all the axes until we have a desirable result with unique information on all axes... but for two or three axes that can take time.  For more than that it will take large amounts of hallucinogenic drugs which are against university policy.
+
+But luckily you are smart college kids and have a tool at your hands.  One that you may have repressed due to trauma in Differential Equtions.
+
+# EigenValues and EigenVectors.
+
+Let's take a look at a very simple system.  Just two parameters.  We're using a dataset from the [Penn State Center for Astrostatisics](https://astrostatistics.psu.edu) used to demonstrate principal component analysis: 
+
+
+```{r}
+
+# Penn State 
+
+x = read.table(file   = url(description = "https://astrostatistics.psu.edu/su09/lecturenotes/marks.dat"),
+               header = TRUE,
+               sep    = "")
+
+colnames(x) = c("x1","x2") # making it very simple and generic here.
+
+print(x)
+```
+
+
+This gives is a vector that we can call $\vec{x}$.
+
+When we plot the two components we get the following.
+
+
+
+```{r}
+
+# Plot X1 v X2
+
+ggplot(data = x) + # create a graphic object 
+  
+  aes(x     = x1,                # select variables that will be plotted
+      y     = x2) + 
+  
+  theme_bw() +                     # simple black and white theme.
+  
+  coord_fixed() +                           # creates a nice 1:1 proportion in plotting.
+  
+  ggtitle(label = "Penn State Sample Set") +
+
+  xlim(min(x$x1,
+           x$x2),
+       max(x$x1,
+           x$x2)) +   
+  
+  ylim(min(x$x1,
+           x$x2),
+       max(x$x1,
+           x$x2)) +  
+
+  geom_point(alpha = 0.5,     # and throw out a scatter point set.
+             color = "red")  
+
+```
+
+As in the above case, we have two functional dimensions, the main component going southwest to northeast.  And a perpendicular vector that represents chaff, noise, or the (third clarinet secton)[].
+
+Now let's imagine a simple linear pair of equations that will create a newly projected value of $\vec{y}$
+
+$$y_1 = g_{0,1} + g_{1,1} x_1\\
+  y_2 = g_{0,2} + g_{1,2} x_1$$
+  
+In this new formula the "space" on which we project the values will be the same.  It'll just be like taking your screen and rotating until the main "line" of data we see is horizontal.  In matrix algebra we present the above equation this way...
+
+$$\begin{bmatrix}y_1\\ y_2\end{bmatrix}=\begin{bmatrix}g_{0,1} & g_{1,1}\\ g_{0,2} & g_{1,2} \end{bmatrix}   \begin{bmatrix}x_1\\ x_2\end{bmatrix} \\
+\vec{y} = \mathbf{G} \vec{x} $$
+
+So now we all have to do is to get $\mathbf{G}$.
+
+But what are the rules we'll need to define $\mathbf{G}$?
+
+One of our lead criteria will be to produce a transform that takes our correlation or covariance matrix, $\mathbf{R}_{\vec{y}}$ or $\mathbf{S}_{\vec{y}}$, to take the form of
+
+$$\mathbf{R}_{\vec{y}}=\begin{bmatrix}1 & 0\\ 0 & 1\end{bmatrix} \quad \textrm{and} \quad    \mathbf{S}_{\vec{y}}=\begin{bmatrix}s^2_{y_1} & 0\\ 0 & s^2_{y_2}\end{bmatrix}$$
+
+If we look at $\mathbf{R}_{\vec{y}}$ vs.our original $\mathbf{R}_{\vec{x}}$, we have some work to do because $x_1$ and $x_2$ are *very* correlated against each other in our particular scenario.
+
+(numerically...)
+
+```{r}
+
+cor(x)
+
+```
+
+(and visually...)
+
+```{r}
+
+corrplot(corr   = cor(x),
+         method = "ellipse")
+
+```
+
+(The convention for Principle Component Analysis is to use the covariance)
+
+
+```{r}
+
+cov(x)
+
+```
+
+
+Mathematically we should have a similar transform between our basic transform and the final covariance matrix so that for our transform and initial covariance matrix of $\vec{x}$, 
+
+$$\vec{y} = \mathbf{G} \vec{x}$$
+and 
+$$\mathbf{S}_{\vec{x}} = \frac{ \sum(\vec{x}-\overline{\vec{x}})(\vec{x}-\overline{\vec{x}})^T }{N-1}$$
+
+our resulting covariance matrix, $\mathbf{S}_{\vec{y}}$, would be
+
+$$\mathbf{S}_\vec{y} = \mathbf{S}_{\mathbf{G}\vec{x}} = 
+\frac{ \sum(\vec{y}-\overline{\vec{y}})(\vec{y}-\overline{\vec{y}})^T }{N-1} = 
+\frac{ \sum(\mathbf{G}\vec{x}-\mathbf{G}\overline{\vec{x}})(\mathbf{G}\vec{x}-\mathbf{G}\overline{\vec{x}})^T }{N-1}$$
+and with a little linear algebra:
+
+$$\mathbf{S}_\vec{y} =\mathbf{G} \mathbf{S}_{\vec{x}} \mathbf{G}^T$$
+
+So this will create a resulting field of matricies that are decorrelated -- that is our desired outcome.  Another outcome will be another predictable result of applying a linear transform:  
+
+$$\mathbf{G}\mathbf{G}^T=\mathbf{I}$$ 
+
+which means in plain english that this transformed $\vec{y}$ coordinate framework. will be "orthoganal" in state space just like our original $\vec{x}$ coordinate framework. 
+
+And to do this... is where we get to make use of Eigenvalues and Eigenvectors.
+
+## Mathematical Construction of Eigenvalues
+
+Let's consider a generic linear transform, $\mathbf{M}$, that converts generic vector $\vec{x}$ to $\vec{y}$
+
+$$\vec{y}=\mathbf{M}\vec{x}$$
+
+We can also envision a single scalar parameter, $\lambda$ that also accomplishes that goal so that...
+
+$$\vec{y}=\mathbf{M}\vec{x}=\lambda\vec{x}$$
+
+with a little algebra we can say that
+
+$$\mathbf{M}\vec{x}=\lambda\vec{x} \\
+\mathbf{M}\vec{x} - \lambda\vec{x} = 0 \\
+(\mathbf{M} - \lambda\mathbf{I}) \vec{x} = 0$$
+
+so if we want to solve this system of unknowns we have a choice of two ways to get "zero".  
+
+First the "trivial solition" that checks the solution box but doesn't really give us much to work on. (Also since \vec{x} has the data we acutally want to transform into \vec{y}, it's definitely not one we can use!)
+
+$$\vec{x} = 0$$
+
+.. ok that leaves this one.  
+
+$$|\mathbf{M} - \lambda\mathbf{I}|=0$$
+The resulting values of $\lambda$ that zero's out $\mathbf{M}$ are what we call the *eigenvalues*
+
+Here is what we do with this: $\mathbf{M}$ is our initial covariance matrix, $\mathbf{S}_{\vec{x}}$.
+
+$$|\mathbf{M} - \lambda\mathbf{I}|=0 $$
+$$|\mathbf{S}_{\vec{x}} - \lambda\mathbf{I}|=0 $$
+
+$$\begin{vmatrix}  \begin{bmatrix}s^2_{x_1} & s_{x_{1},x_{2}}\\ s_{x_{1},x_{2}} & s^2_{y_2}\end{bmatrix} -  \begin{bmatrix}\lambda & 0\\ 0 & \lambda\end{bmatrix}   \end{vmatrix}   = 0 $$
+
+$$\begin{vmatrix}  \begin{bmatrix}82.2 & 75.6\\ 75.6 & 77.0\end{bmatrix} -  \begin{bmatrix}\lambda & 0\\ 0 & \lambda\end{bmatrix}   \end{vmatrix}   = 0$$
+$$\begin{vmatrix}  \begin{bmatrix}82.2-\lambda & 75.6\\ 75.6 & 77.0-\lambda\end{bmatrix} \end{vmatrix}   = 0$$
+which results in a polynomial expression.
+
+$$\lambda^x + 159.26 \lambda +516.89  = 0$$
+
+and for us that gives us two possible values : 
+
+$$\lambda^x =  155.28 \space and \space 3.97$$
+
+
+If we take our values and plug them 
+
+$$(\mathbf{S}_{\vec{x}} - \lambda\mathbf{I}) \vec{g} = 0$$
+
+$$\begin{bmatrix}82.2-\lambda & 75.6\\ 75.6 & 77.0-\lambda\end{bmatrix}  \begin{bmatrix}g(\lambda)_{1} \\ g(\lambda)_{2} \end{bmatrix} = 0$$
+$$g(\lambda=155.28) =  -0.72 \space and \space  0.69  $$
+$$g(\lambda=3.97) =   -0.69 \space and \space  -0.72  $$
+
+These are used to create the eigenvector, $\mathbf{G}$, which will also be our transform to rotate our axes.
+
+$$\mathbf{G} = \begin{bmatrix}-0.72 & 0.69\\ -0.69 & -0.72\end{bmatrix}$$
+
+so that $\vec{y}=\mathbf{G}\vec{x}$
+
+In R this is done simply by the [eigen()](https://www.rdocumentation.org/packages/base/versions/3.6.0/topics/eigen) function.
+
+```{r}
+# In R this is done simply by the eigen() function.
+
+eigen_of_x = eigen(x = cov(x))
+
+print(eigen_of_x)
+
+
+```
+
+
+
+
+
+
+
+# Back to our Plot
+
+```{r}
+
+# Prepare Data for PCA Analysis
+
+  # Step 1: Collect ONLY the values you want to use in the PCA
+
+  Landsat_Reflectances = Landsat_7_Samples %>% 
+                              select(c(ETM1,
+                                       ETM2,
+                                       ETM3,
+                                       ETM4,
+                                       ETM5,
+                                       ETM7))
+
+  # Chose/Createa vector for identifying *each* Pixel.
+  #  Since the values need to be unique I am merging
+  #     my class label with the id number for the pixels 
+  #     in each class
+  #   
+  # If you want to group pixels you should keep 
+  #    a second vector corresponding to the groups
+  #    for later.  For us this is the Landsat_7_Samples$Class
+
+  Landsat_Reflectances$rowname = str_c(Landsat_7_Samples$Class,
+                                         ":",
+                                         sprintf("%03d",                 # C-style format code
+                                                  Landsat_7_Samples$ID), # value to be parsed
+                                         sep = "")
+    
+  # Convert "rowname" column into a seprate value coordinate for each row.
+  #   this removes the variable from the data frame and places uses it to 
+  #   "number" each row
+
+  Landsat_Reflectances = Landsat_Reflectances %>% 
+                                 column_to_rownames(var = "rowname")
+  
+  # now we can inspect our work
+
+  print(Landsat_Reflectances)
+
+Landsat_PCA = PCA(X          = Landsat_Reflectances, # Original Data Frame
+                  scale.unit = TRUE,                 # Scale to 1 SD
+                  graph      = FALSE)                # Don't Graph Because the one below is prettier\
+
+
+fviz_pca_biplot(X            = Landsat_PCA,                # PCA Data Frame
+                title        = str_c("PCA Analysis: ",     # Plot Label)
+                                     "Landsat 7 ETM+, ",
+                                     "Rapid City, SD, ",
+                                     "2001-08-16 1725 UTC",
+                                     sep = ""),
+                geom.ind     = "point",                    # show points only (but not "text")
+                legend.title = "Land Use",                 # Label for Class Legend
+                col.ind      = Landsat_7_Samples$Class,    # Class Values for Data Point
+                palette      = Landsat_7_Samples_ColorMap, # Color Palette for Data Points
+                alpha.ind    = 0.5,                        # Color Transparency for Data Points
+                col.var      = "black",                    # PCA->Real Vector Color
+                addEllipses  = TRUE)                       # Add Concentration ellipses
+                
+
+```
+
